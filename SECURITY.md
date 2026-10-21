@@ -162,6 +162,31 @@ navegador **direto** para ele e você recebe só um token. Isso te coloca em
       `'unsafe-inline'` é a defesa mais eficaz que resta contra XSS.
 - [ ] Rotação de logs e retenção definida para `audit_log`.
 
+### Custo do login (medido)
+
+O scrypt está em N=2¹⁵, que custa **~100 ms e 32 MiB por verificação**. Isso é
+proposital — é o que torna caro quebrar hashes em GPU se o banco vazar. Mas tem
+consequência operacional:
+
+| Cenário | Medido |
+|---|---|
+| Cadastro | ~168 ms |
+| Login | ~103 ms |
+| 20 logins simultâneos | ~506 ms no total |
+
+O Node roda scrypt na *threadpool* do libuv (4 threads por padrão), então as
+chamadas enfileiram em vez de alocar 32 MiB cada uma ao mesmo tempo — o pico
+fica em ~128 MiB, não 640 MiB. O laço de eventos **não** trava: o `/api/health`
+respondeu em 2 ms sob carga.
+
+Ainda assim, uma enxurrada de tentativas de login satura a threadpool e deixa
+todo o resto lento. O limite por e-mail ajuda, mas se você escalar:
+
+- aumente `UV_THREADPOOL_SIZE` junto com os núcleos disponíveis;
+- considere um limite global de verificações simultâneas (semáforo);
+- não baixe o N do scrypt para "resolver" lentidão — isso troca segurança real
+  por latência percebida. Prefira mais máquinas.
+
 ### Sobre conluio
 
 Nenhum código impede dois amigos combinarem quem perde para mover saldo entre

@@ -336,6 +336,14 @@
 <script>LPMusic.setup({vol:0.28,button:document.getElementById('muteBtn'),icon:false,toggle:false});</script>
 
 <script>
+/* Modo da partida, declarado no topo de proposito.
+   Varias funcoes acima consultam `betMode`; deixar a declaracao `let` la
+   embaixo funcionava so porque elas nao rodavam antes. Qualquer chamada nova
+   no nivel superior cairia na zona morta temporal e quebraria a pagina. */
+const matchParams=new URLSearchParams(location.search);
+const matchCode=matchParams.get('match');
+let betMode=!!matchCode, myColor=null, matchVersion=-1, stopPolling=null, busy=false;
+
 const COLORS = ['red','green','yellow','blue'];
 const NAMES = {red:'Vermelho',green:'Verde',yellow:'Amarelo',blue:'Azul'};
 const HEX   = {red:'#ff3d81',green:'#2bffb0',yellow:'#ffc94d',blue:'#4d8bff'};
@@ -1030,9 +1038,6 @@ function celebrate(color){
  * E por isso que `rollValue()` e `applyMove` locais nao sao usados neste modo:
  * qualquer coisa decidida aqui seria editavel pelo jogador no console.
  */
-const matchParams=new URLSearchParams(location.search);
-const matchCode=matchParams.get('match');
-let betMode=!!matchCode, myColor=null, matchVersion=-1, stopPolling=null, busy=false;
 
 function betToast(msg){ toast(msg); }
 
