@@ -187,12 +187,34 @@
     font-family:var(--body); font-size:13px; font-weight:700; cursor:pointer; opacity:.75; white-space:nowrap; }
   .tb.on{ opacity:1; background:linear-gradient(135deg,var(--cyan),var(--violet)); border-color:transparent; box-shadow:0 0 16px rgba(45,226,255,.45); }
   .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-  .chk{ list-style:none; padding:0; margin:0; }
-  .chk li{ display:flex; gap:12px; align-items:flex-start; padding:10px 0; border-bottom:1px solid var(--glass-brd); font-size:14px; }
-  .chk li span{ width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; background:rgba(255,255,255,.1); }
-  .chk li.ok span{ background:linear-gradient(135deg,#2bffb0,#119b6b); color:#03281c; }
-  .chk li.pend span{ background:linear-gradient(135deg,#ffe27a,#e0a63a); }
-  .chk li small{ display:block; opacity:.65; font-size:12px; margin-top:2px; }
+  /* --- estilos das telas reescritas (conta, histórico, depósito) --- */
+  .hdrline{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .bal{ font-family:var(--display); font-size:30px; font-weight:800; letter-spacing:.5px;
+        margin:10px 0 2px; color:#fff; text-shadow:0 0 22px rgba(45,226,255,.45); }
+  .hist{ display:flex; align-items:center; gap:12px; padding:11px 0;
+         border-bottom:1px solid var(--glass-brd); }
+  .hic{ width:34px; height:34px; border-radius:50%; flex-shrink:0; font-size:16px;
+        display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,.08); }
+  .hbody{ flex:1; min-width:0; }
+  .hbody b{ display:block; font-size:13px; }
+  .hbody small{ display:block; opacity:.6; font-size:11px; margin-top:2px; }
+  .hamt{ font-weight:700; font-size:13px; white-space:nowrap; }
+  .hamt.in{ color:#2bffb0; }
+  .hamt.out{ color:#ff8fa3; }
+  .qrimg{ display:block; width:200px; height:200px; margin:14px auto 10px;
+          border-radius:12px; background:#fff; padding:8px; }
+  /* O item de verificação é uma div, não <li>, na tela reescrita. */
+  .chk{ display:flex; gap:12px; align-items:flex-start; padding:10px 0;
+        border-bottom:1px solid var(--glass-brd); font-size:14px; }
+  .chk > span{ width:22px; height:22px; border-radius:50%; display:flex; align-items:center;
+               justify-content:center; font-size:12px; flex-shrink:0; background:rgba(255,255,255,.1); }
+  .chk.ok > span{ background:rgba(43,255,176,.22); color:#2bffb0; }
+  .chk.pend > span{ background:rgba(255,201,77,.22); color:#ffc94d; }
+  .chk b{ display:block; font-size:13px; }
+  .chk small{ display:block; opacity:.68; font-size:12px; margin-top:2px; }
+  select{ width:100%; padding:12px 14px; border-radius:12px; font-size:15px;
+          border:1px solid var(--glass-brd); background:rgba(255,255,255,.06); color:var(--text); }
+
   .warn{ background:rgba(255,201,77,.12); border:1px solid rgba(255,201,77,.45); border-radius:14px; padding:12px 14px; font-size:13px; line-height:1.5; margin:10px 0; }
   .info{ background:rgba(45,226,255,.08); border:1px solid rgba(45,226,255,.35); border-radius:14px; padding:12px 14px; font-size:13px; line-height:1.5; margin-bottom:14px; }
   .okmsg{ color:var(--ok); font-size:13px; min-height:16px; margin-top:8px; }
@@ -265,8 +287,11 @@
     <div id="fieldName" style="display:none;">
       <label>Apelido (aparece nas partidas)</label><input id="inName" placeholder="Ex.: Astronauta" maxlength="20">
     </div>
-    <label>E-mail</label><input id="inEmail" type="email" placeholder="voce@email.com" autocomplete="email">
-    <label>Senha</label><input id="inPass" type="password" placeholder="mínimo 6 caracteres" autocomplete="current-password">
+    <label for="inEmail">E-mail</label><input id="inEmail" type="email" placeholder="voce@email.com" autocomplete="email">
+    <label for="inPass">Senha</label><input id="inPass" type="password" placeholder="mínimo 10 caracteres" autocomplete="current-password">
+    <div id="fieldBirth" style="display:none;">
+      <label for="inBirth">Data de nascimento</label><input id="inBirth" type="date">
+    </div>
     <div id="fieldTerms" style="display:none;">
       <label class="chkline"><input type="checkbox" id="inTerms"> <span>Tenho <b>18 anos ou mais</b> e aceito os Termos de Uso e a Política de Privacidade.</span></label>
     </div>
@@ -286,35 +311,20 @@
 <div id="view-deposit" class="view">
   <div id="topbar"><button id="backFromDeposit">← Voltar</button><span></span></div>
   <div class="card">
-    <h2 class="sec">Depositar</h2>
-    <div id="depBlock"></div>
-    <div class="tabs">
-      <button id="tabPix" class="on">Pix</button>
-      <button id="tabCard">Cartão</button>
-    </div>
-    <label>Valor do depósito</label>
-    <input id="depAmount" type="number" min="1" value="50" placeholder="R$">
+    <h2 class="sec">Depositar via Pix</h2>
+    <label for="depAmount">Valor do depósito</label>
+    <input id="depAmount" inputmode="decimal" value="50,00" placeholder="R$ 0,00">
     <div class="chips" id="depChips">
       <button data-v="20">R$20</button><button data-v="50" class="on">R$50</button>
       <button data-v="100">R$100</button><button data-v="200">R$200</button>
     </div>
-    <div id="panelPix">
-      <div class="qr" id="qrGrid"></div>
-      <div class="code" id="pixCode">00020126...ludopix...5204000053039865802BR...6304ABCD</div>
-      <button class="bigbtn" id="btnPixPay">Já paguei</button>
-    </div>
-    <div id="panelCard" style="display:none;">
-      <div id="savedCardBox"></div>
-      <label>Número do cartão</label><input id="cardNum" placeholder="0000 0000 0000 0000" maxlength="19" inputmode="numeric">
-      <div class="row" style="gap:10px;">
-        <div style="flex:1;"><label>Validade</label><input id="cardExp" placeholder="MM/AA" maxlength="5" inputmode="numeric"></div>
-        <div style="flex:1;"><label>CVV</label><input id="cardCvv" placeholder="123" maxlength="4" inputmode="numeric" type="password"></div>
-      </div>
-      <label>Nome impresso</label><input id="cardName" placeholder="Como está no cartão">
-      <button class="bigbtn" id="btnCardPay">Confirmar pagamento</button>
-    </div>
+    <button class="bigbtn" id="btnCreateDep">Gerar código Pix</button>
     <div class="status" id="depStatus"></div>
-    <p class="muted" style="margin-top:10px;">Pagamento simulado neste protótipo — nenhum dado de cartão é salvo.</p>
+    <div id="depResult"></div>
+    <p class="muted" style="margin-top:14px;">
+      O saldo entra sozinho quando o banco confirmar o pagamento. Não existe
+      botão de &ldquo;já paguei&rdquo;: quem credita é a confirmação do provedor, não o clique.
+    </p>
   </div>
 </div>
 
@@ -625,478 +635,27 @@ const LPMusic=(function(){
 </script>
 <script>LPMusic.setup({vol:0.32,button:document.getElementById('muteBtn'),icon:true,toggle:true,persist:true});</script>
 
-<script>
-const COLORS={red:'#ff3d81',green:'#2bffb0',yellow:'#ffc94d',blue:'#4d8bff'};
-const EMOJIS=['🎲','🐉','🦁','🐯','🐸','🚀'];
-const COUNTRIES={AR:'Argentina',BO:'Bolívia',BR:'Brasil',CA:'Canadá',CL:'Chile',CO:'Colômbia',CW:'Curaçao',EC:'Equador',ES:'Espanha',US:'Estados Unidos',FR:'França',DE:'Alemanha',IN:'Índia',IE:'Irlanda',IT:'Itália',JP:'Japão',MX:'México',NL:'Países Baixos',PY:'Paraguai',PE:'Peru',PT:'Portugal',GB:'Reino Unido',RU:'Rússia',UY:'Uruguai',VE:'Venezuela'};
-const UFS=['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
-const $=id=>document.getElementById(id);
-let MM=null; function mm(k,t){ if(MM) MM.react(k,t); }
-const fmt=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
-const digits=s=>String(s||'').replace(/\D/g,'');
-const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const DAY=864e5;
+<script type="module">
+/* Conta do jogador.
+ *
+ * Toda a lógica vive em js/perfil.js e conversa com o servidor. O que havia
+ * aqui antes guardava senha, saldo, histórico e limites no localStorage —
+ * ou seja, o jogador era dono do próprio saldo e podia apagar o próprio
+ * limite de jogo responsável. Nada disso sobrevive a um sistema que
+ * movimenta dinheiro de verdade.
+ */
+import { initProfile } from './js/perfil.js';
 
-/* ---------- validators / masks ---------- */
-function maskCPF(v){ return digits(v).slice(0,11).replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2'); }
-function maskPhone(v){ const d=digits(v).slice(0,11); return d.length<=10 ? d.replace(/(\d{2})(\d)/,'($1) $2').replace(/(\d{4})(\d)/,'$1-$2') : d.replace(/(\d{2})(\d)/,'($1) $2').replace(/(\d{5})(\d)/,'$1-$2'); }
-function validCPF(v){
-  const d=digits(v); if(d.length!==11 || /^(\d)\1+$/.test(d)) return false;
-  let s=0; for(let i=0;i<9;i++) s+=d[i]*(10-i); let r=(s*10)%11%10; if(r!=d[9]) return false;
-  s=0; for(let i=0;i<10;i++) s+=d[i]*(11-i); r=(s*10)%11%10; return r==d[10];
-}
-function ageOf(iso){
-  if(!iso) return -1; const b=new Date(iso+'T00:00:00'); if(isNaN(b)) return -1;
-  const n=new Date(); let a=n.getFullYear()-b.getFullYear(); const m=n.getMonth()-b.getMonth();
-  if(m<0 || (m===0 && n.getDate()<b.getDate())) a--; return a;
-}
-function maskCPFShow(v){ const d=digits(v); return d.length===11 ? '***.'+d.slice(3,6)+'.'+d.slice(6,9)+'-**' : '—'; }
-function cardBrand(n){ const d=digits(n); if(/^4/.test(d)) return 'Visa'; if(/^(5[1-5]|2[2-7])/.test(d)) return 'Mastercard'; if(/^3[47]/.test(d)) return 'Amex'; if(/^(636|504|5067|4011|6362)/.test(d)) return 'Elo'; return 'Cartão'; }
-function fmtDate(ts){ return new Date(ts).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); }
-
-/* ---------- password hashing (salted SHA-256, prototype only) ---------- */
-const rnd=()=>Math.random().toString(36).slice(2,10);
-async function sha(str){
-  try{ const b=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str)); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join(''); }
-  catch(e){ let h=5381; for(const ch of str) h=((h<<5)+h+ch.charCodeAt(0))>>>0; return 'x'+h.toString(16); }
-}
-async function makePass(pw){ const salt=rnd()+rnd(); return {salt, hash:await sha(salt+pw)}; }
-async function checkPass(p,pw){ return !!p.pass && (await sha(p.pass.salt+pw))===p.pass.hash; }
-
-/* ---------- storage ---------- */
-function loadProfile(email){ try{ const r=localStorage.getItem('ludopix_profile_'+email); return r?normalize(JSON.parse(r)):null; }catch(e){ return null; } }
-function saveProfile(p){ try{ localStorage.setItem('ludopix_profile_'+p.email, JSON.stringify(p)); localStorage.setItem('ludopix_current_email', p.email); }catch(e){} }
-function normalize(p){
-  p.id=p.id||('LP'+rnd().toUpperCase().slice(0,6));
-  p.createdAt=p.createdAt||Date.now();
-  p.history=p.history||[]; p.balance=p.balance||0; p.color=p.color||'blue'; p.emoji=p.emoji||'🎲';
-  p.personal=Object.assign({fullName:'',cpf:'',birth:'',phone:'',country:'BR',city:'',uf:''},p.personal||{});
-  p.kyc=Object.assign({doc:'none',docName:''},p.kyc||{});
-  p.pay=Object.assign({pixType:'cpf',pixKey:'',card:null},p.pay||{});
-  p.limits=Object.assign({day:null,week:null,month:null},p.limits||{});
-  p.pauseUntil=p.pauseUntil||0; p.exclUntil=p.exclUntil||0;
-  p.prefs=Object.assign({hideBalance:false,confirmPass:true,emailNotif:true},p.prefs||{});
-  return p;
-}
-
-/* ---------- business rules ---------- */
-function personalOk(p){ const d=p.personal; return d.fullName.trim().split(/\s+/).filter(Boolean).length>=2 && validCPF(d.cpf) && ageOf(d.birth)>=18 && digits(d.phone).length>=10 && !!d.country; }
-function level(p){ if(!personalOk(p)) return 1; return p.kyc.doc==='verified' ? 3 : 2; }
-const LEVEL_TXT={1:'Nível 1 · Conta criada',2:'Nível 2 · Dados completos',3:'Nível 3 · Verificada'};
-function lockInfo(p){ const n=Date.now(); if(p.exclUntil>n) return {type:'Autoexclusão',until:p.exclUntil}; if(p.pauseUntil>n) return {type:'Pausa',until:p.pauseUntil}; return null; }
-function usage(p,ms){ const t=Date.now()-ms; return p.history.filter(h=>h.type==='in' && h.ts && h.ts>=t).reduce((s,h)=>s+h.amount,0); }
-function addHistory(type,icon,label,amount){ session.history.push({type,icon,label,amount,date:new Date().toLocaleString('pt-BR'),ts:Date.now()}); saveProfile(session); }
-
-let session=null, activeTab='perfil', histFilter='all';
-
-function showView(id){ document.querySelectorAll('.view').forEach(v=>v.classList.remove('show')); $(id).classList.add('show'); window.scrollTo(0,0); }
-function msg(el,text,ok){ el.className=(ok?'okmsg':'err'); el.textContent=text; }
-
-/* ================= AUTH ================= */
-let authMode='login';
-function setAuthMode(m){
-  authMode=m;
-  $('tabLogin').classList.toggle('on',m==='login'); $('tabSignup').classList.toggle('on',m==='signup');
-  $('fieldName').style.display=m==='signup'?'block':'none'; $('fieldTerms').style.display=m==='signup'?'block':'none';
-  $('authBtn').textContent=m==='signup'?'Criar conta':'Entrar'; $('authErr').textContent='';
-}
-$('tabLogin').addEventListener('click',()=>setAuthMode('login'));
-$('tabSignup').addEventListener('click',()=>setAuthMode('signup'));
-$('authBtn').addEventListener('click', async ()=>{
-  const email=$('inEmail').value.trim().toLowerCase(), pass=$('inPass').value, err=$('authErr'); err.textContent='';
-  if(!/^\S+@\S+\.\S+$/.test(email)){ err.textContent='Informe um e-mail válido.'; return; }
-  if(pass.length<6){ err.textContent='A senha deve ter pelo menos 6 caracteres.'; return; }
-  if(authMode==='signup'){
-    const name=$('inName').value.trim();
-    if(name.length<2){ err.textContent='Informe um apelido (mínimo 2 letras).'; return; }
-    if(!$('inTerms').checked){ err.textContent='É necessário confirmar que você tem 18 anos ou mais e aceitar os termos.'; return; }
-    if(loadProfile(email)){ err.textContent='Já existe uma conta com esse e-mail — faça login.'; return; }
-    session=normalize({name,email,color:'blue',emoji:'🎲',pass:await makePass(pass),termsAt:Date.now()});
-    saveProfile(session);
-  } else {
-    const p=loadProfile(email);
-    if(!p){ err.textContent='Conta não encontrada — crie uma conta.'; return; }
-    if(p.pass){ if(!(await checkPass(p,pass))){ err.textContent='E-mail ou senha incorretos.'; return; } }
-    else { p.pass=await makePass(pass); saveProfile(p); }   // legacy account: first login sets the password
-    session=p;
-  }
-  activeTab='perfil'; enterAccount();
+const mascot = createMascot({
+  el: document.getElementById('mstage'),
+  sprites: SPRM, charH: 124, ground: 14, stroll: true, tap: true,
 });
 
-function enterAccount(){ $('inPass').value=''; renderAccount(); showView('view-account'); mm('hello','Bem-vindo, '+session.name+'! 👋'); }
-
-/* ================= ACCOUNT HUB ================= */
-const TABS=[['perfil','👤 Perfil'],['carteira','💰 Carteira'],['seguranca','🛡️ Segurança'],['limites','⚖️ Jogo responsável'],['ajustes','⚙️ Ajustes']];
-function renderAccount(){ renderHeader(); renderTabbar(); renderTab(); }
-
-function renderHeader(){
-  const p=session, lv=level(p), lock=lockInfo(p);
-  const bal = p.prefs.hideBalance ? 'R$ ••••' : fmt(p.balance);
-  $('hdr').innerHTML=`
-    <div class="hdr-top">
-      <div class="avatar sm" style="background:${COLORS[p.color]}">${p.emoji}</div>
-      <div class="hdr-info">
-        <b>${esc(p.name)}</b>
-        <small>ID ${p.id} · desde ${new Date(p.createdAt).toLocaleDateString('pt-BR',{month:'2-digit',year:'numeric'})}</small>
-        <span class="lvl lvl${lv}">${LEVEL_TXT[lv]}</span>
-      </div>
-      <button class="linkbtn" id="logoutBtn">Sair</button>
-    </div>
-    ${lock?`<div class="warn">⛔ ${lock.type} ativa até ${new Date(lock.until).toLocaleDateString('pt-BR')} — depósitos bloqueados.</div>`:''}
-    <div class="hdr-bal">
-      <div><small>Saldo disponível</small><b>${bal}</b></div>
-      <div class="row" style="gap:8px;width:auto;"><a class="bigbtn mini ghost" href="jogo.html" style="text-decoration:none;">Jogar</a><button class="bigbtn mini" id="hdrDep">Depositar</button></div>
-    </div>`;
-  $('logoutBtn').addEventListener('click',logout);
-  $('hdrDep').addEventListener('click',openDeposit);
-}
-function logout(){ try{ localStorage.removeItem('ludopix_current_email'); }catch(e){} session=null; setAuthMode('login'); showView('view-auth'); }
-
-function renderTabbar(){
-  $('tabbar').innerHTML=TABS.map(t=>`<button class="tb${t[0]===activeTab?' on':''}" data-t="${t[0]}">${t[1]}</button>`).join('');
-  $('tabbar').querySelectorAll('.tb').forEach(b=>b.addEventListener('click',()=>{ activeTab=b.dataset.t; renderTabbar(); renderTab(); }));
-}
-function renderTab(){
-  const f={perfil:tabPerfil,carteira:tabCarteira,seguranca:tabSeguranca,limites:tabLimites,ajustes:tabAjustes}[activeTab]; f();
-}
-
-/* ---------- TAB: PERFIL ---------- */
-function tabPerfil(){
-  const p=session, d=p.personal, ok=personalOk(p);
-  const doc=p.kyc.doc;
-  const item=(st,t,s)=>`<li class="${st}"><span>${st==='ok'?'✔':st==='pend'?'⏳':'○'}</span><div>${t}<small>${s}</small></div></li>`;
-  $('tabBody').innerHTML=`
-    <h2 class="sec">Verificação da conta</h2>
-    <ul class="chk">
-      ${item('ok','E-mail cadastrado',esc(p.email))}
-      ${item(ok?'ok':'no','Dados pessoais completos','Libera <b>depósitos</b>')}
-      ${item(doc==='verified'?'ok':doc==='pending'?'pend':'no','Documento com foto (RG/CNH)',doc==='verified'?'Verificado — libera <b>saques</b>':doc==='pending'?'Em análise: '+esc(p.kyc.docName):'Libera <b>saques</b>')}
-    </ul>
-    <div class="row" style="margin-top:8px;">
-      <input type="file" id="docFile" accept="image/*,application/pdf" hidden>
-      <button class="bigbtn ghost mini" id="docBtn" ${(!ok||doc==='verified')?'disabled':''}>${doc==='none'?'Enviar documento':'Reenviar documento'}</button>
-      ${doc==='pending'?'<button class="bigbtn ghost mini" id="docOk">(teste) aprovar</button>':''}
-    </div>
-    ${!ok?'<p class="muted" style="margin-top:8px;">Complete seus dados abaixo para enviar o documento.</p>':''}
-
-    <h2 class="sec" style="margin-top:22px;">Avatar</h2>
-    <div class="pickrow" id="colorPick"></div>
-    <div class="pickrow" id="emojiPick"></div>
-
-    <h2 class="sec">Dados pessoais</h2>
-    <label>Apelido</label><input id="f_nick" value="${esc(p.name)}" maxlength="20">
-    <label>Nome completo (como no documento)</label><input id="f_full" value="${esc(d.fullName)}" placeholder="Nome e sobrenome" autocomplete="name">
-    <div class="grid2">
-      <div><label>CPF</label><input id="f_cpf" value="${esc(maskCPF(d.cpf))}" placeholder="000.000.000-00" inputmode="numeric" maxlength="14"></div>
-      <div><label>Data de nascimento</label><input id="f_birth" type="date" value="${esc(d.birth)}"></div>
-    </div>
-    <div class="grid2">
-      <div><label>Telefone</label><input id="f_phone" value="${esc(maskPhone(d.phone))}" placeholder="(00) 00000-0000" inputmode="tel" maxlength="15"></div>
-      <div><label>País</label><select id="f_country">${Object.keys(COUNTRIES).map(c=>`<option value="${c}"${c===d.country?' selected':''}>${COUNTRIES[c]}</option>`).join('')}</select></div>
-    </div>
-    <div class="grid2">
-      <div><label>Cidade</label><input id="f_city" value="${esc(d.city)}" placeholder="Cidade"></div>
-      <div id="ufWrap"><label>Estado</label><select id="f_uf"><option value="">—</option>${UFS.map(u=>`<option${u===d.uf?' selected':''}>${u}</option>`).join('')}</select></div>
-    </div>
-    <label>E-mail</label><input value="${esc(p.email)}" readonly style="opacity:.6">
-    <div id="perfMsg" class="err"></div>
-    <button class="bigbtn" id="savePerf">Salvar dados</button>
-    <p class="muted" style="margin-top:10px;">Você precisa ter 18 anos ou mais. O país escolhido define a bandeira exibida quando você vence uma partida.</p>`;
-  // avatar pickers
-  const cp=$('colorPick'); Object.keys(COLORS).forEach(c=>{ const b=document.createElement('button'); b.style.background=COLORS[c]; b.className=c===p.color?'selc':''; b.addEventListener('click',()=>{ p.color=c; saveProfile(p); renderHeader(); tabPerfil(); }); cp.appendChild(b); });
-  const ep=$('emojiPick'); EMOJIS.forEach(e=>{ const b=document.createElement('button'); b.textContent=e; b.className=e===p.emoji?'selc':''; b.addEventListener('click',()=>{ p.emoji=e; saveProfile(p); renderHeader(); tabPerfil(); }); ep.appendChild(b); });
-  // masks
-  $('f_cpf').addEventListener('input',e=>{ e.target.value=maskCPF(e.target.value); });
-  $('f_phone').addEventListener('input',e=>{ e.target.value=maskPhone(e.target.value); });
-  const toggleUF=()=>{ $('ufWrap').style.display=$('f_country').value==='BR'?'block':'none'; }; toggleUF(); $('f_country').addEventListener('change',toggleUF);
-  // document upload (only the file name/status is kept; the file itself is not stored)
-  $('docBtn').addEventListener('click',()=>$('docFile').click());
-  $('docFile').addEventListener('change',e=>{ const f=e.target.files[0]; if(!f) return;
-    if(f.size>8*1024*1024){ msg($('perfMsg'),'Arquivo maior que 8 MB.'); return; }
-    mm('cheer','Documento enviado! 📄'); p.kyc.doc='pending'; p.kyc.docName=f.name; saveProfile(p); renderHeader(); tabPerfil(); });
-  const ok2=$('docOk'); if(ok2) ok2.addEventListener('click',()=>{ mm('dance','Conta verificada! 🎉'); p.kyc.doc='verified'; saveProfile(p); renderHeader(); tabPerfil(); });
-  $('savePerf').addEventListener('click',savePerfil);
-}
-function savePerfil(){
-  const p=session, m=$('perfMsg'); m.className='err'; m.textContent='';
-  const nick=$('f_nick').value.trim(), full=$('f_full').value.trim().replace(/\s+/g,' '), cpf=digits($('f_cpf').value), birth=$('f_birth').value, phone=digits($('f_phone').value);
-  const errs=[];
-  if(nick.length<2) errs.push('Apelido muito curto.');
-  if(full.split(' ').filter(Boolean).length<2) errs.push('Informe nome e sobrenome.');
-  if(!validCPF(cpf)) errs.push('CPF inválido.');
-  const ag=ageOf(birth); if(ag<0) errs.push('Informe a data de nascimento.'); else if(ag<18) errs.push('É necessário ter 18 anos ou mais.');
-  if(phone.length<10) errs.push('Telefone inválido.');
-  if(errs.length){ m.textContent=errs.join(' '); mm('wow','Confira os dados 🧐'); return; }
-  const changedId = (digits(p.personal.cpf)!==cpf || p.personal.birth!==birth || p.personal.fullName!==full) && p.kyc.doc!=='none';
-  p.name=nick; p.personal={fullName:full,cpf,birth,phone,country:$('f_country').value,city:$('f_city').value.trim(),uf:$('f_country').value==='BR'?$('f_uf').value:''};
-  if(changedId){ p.kyc.doc='none'; p.kyc.docName=''; }    // identity data changed → document must be re-verified
-  saveProfile(p); renderHeader(); tabPerfil();
-  mm('cheer','Dados salvos! ✅'); const m2=$('perfMsg'); msg(m2, changedId?'Dados salvos. Como a identidade mudou, o documento precisa ser enviado novamente.':'Dados salvos com sucesso ✔', true);
-}
-
-/* ---------- TAB: CARTEIRA ---------- */
-function tabCarteira(){
-  const p=session, lv=level(p);
-  const hist=p.history.filter(h=>histFilter==='all'||h.type===histFilter).slice().reverse();
-  const totIn=p.history.filter(h=>h.type==='in').reduce((s,h)=>s+h.amount,0), totOut=p.history.filter(h=>h.type==='out').reduce((s,h)=>s+h.amount,0);
-  const card=p.pay.card;
-  $('tabBody').innerHTML=`
-    <div class="balance"><small>Saldo disponível</small><span>${p.prefs.hideBalance?'R$ ••••':fmt(p.balance)}</span></div>
-    ${lv<2?'<div class="warn">Complete seus <b>dados pessoais</b> na aba Perfil para liberar depósitos.</div>':''}
-    ${lv===2?'<div class="warn">Envie seu <b>documento</b> na aba Perfil para liberar saques.</div>':''}
-    <div class="row2">
-      <button class="bigbtn" id="goDep">Depositar</button>
-      <button class="bigbtn ghost" id="goWd">Sacar</button>
-    </div>
-    <div class="stats">
-      <div><small>Total depositado</small><b>${fmt(totIn)}</b></div>
-      <div><small>Total sacado</small><b>${fmt(totOut)}</b></div>
-    </div>
-
-    <h2 class="sec">Chave Pix para saques</h2>
-    <div class="grid2">
-      <div><label>Tipo</label><select id="pixType">
-        ${[['cpf','CPF'],['email','E-mail'],['phone','Telefone'],['random','Aleatória']].map(t=>`<option value="${t[0]}"${t[0]===p.pay.pixType?' selected':''}>${t[1]}</option>`).join('')}</select></div>
-      <div><label>Chave</label><input id="pixKey" value="${esc(p.pay.pixKey)}" placeholder="sua chave"></div>
-    </div>
-    <div id="pixMsg" class="err"></div>
-    <button class="bigbtn ghost" id="savePix">Salvar chave Pix</button>
-
-    <h2 class="sec" style="margin-top:22px;">Cartão salvo</h2>
-    ${card?`<div class="cardrow"><span>💳 ${esc(card.brand)} •••• ${esc(card.last4)}</span><small>${esc(card.holder)}</small><button class="linkbtn" id="rmCard">Remover</button></div>`:
-    `<label>Número do cartão</label><input id="svNum" placeholder="0000 0000 0000 0000" maxlength="19" inputmode="numeric">
-     <label>Nome impresso</label><input id="svName" placeholder="Como está no cartão">
-     <div id="cardMsg" class="err"></div>
-     <button class="bigbtn ghost" id="saveCard">Salvar cartão</button>
-     <p class="muted" style="margin-top:8px;">Guardamos apenas a bandeira e os 4 últimos dígitos — nunca o número completo nem o CVV.</p>`}
-
-    <h2 class="sec" style="margin-top:22px;">Histórico</h2>
-    <div class="chips" id="histChips">
-      ${[['all','Todos'],['in','Depósitos'],['out','Saques']].map(c=>`<button data-f="${c[0]}" class="${histFilter===c[0]?'on':''}">${c[1]}</button>`).join('')}
-    </div>
-    <div id="histList">${hist.length?hist.map(h=>`
-      <div class="hitem ${h.type==='in'?'in':'out'}"><span>${h.icon} ${esc(h.label)}<div class="t">${esc(h.date)}</div></span><span>${h.type==='in'?'+':'−'} ${fmt(h.amount)}</span></div>`).join(''):'<div class="empty">Nenhuma movimentação</div>'}</div>`;
-  $('goDep').addEventListener('click',openDeposit);
-  $('goWd').addEventListener('click',openWithdraw);
-  $('savePix').addEventListener('click',savePix);
-  if(card) $('rmCard').addEventListener('click',()=>{ p.pay.card=null; saveProfile(p); tabCarteira(); });
-  else{
-    $('svNum').addEventListener('input',e=>{ e.target.value=digits(e.target.value).slice(0,16).replace(/(.{4})/g,'$1 ').trim(); });
-    $('saveCard').addEventListener('click',()=>{
-      const n=digits($('svNum').value), h=$('svName').value.trim(), m=$('cardMsg');
-      if(n.length<13){ m.textContent='Número de cartão inválido.'; return; }
-      if(h.length<3){ m.textContent='Informe o nome impresso.'; return; }
-      p.pay.card={brand:cardBrand(n),last4:n.slice(-4),holder:h}; saveProfile(p); tabCarteira();
-    });
-  }
-  $('histChips').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{ histFilter=b.dataset.f; tabCarteira(); }));
-}
-function savePix(){
-  const p=session, m=$('pixMsg'), type=$('pixType').value; let key=$('pixKey').value.trim(); m.className='err'; m.textContent='';
-  if(type==='cpf'){ key=digits(key||p.personal.cpf); if(!validCPF(key)){ m.textContent='CPF inválido.'; return; } if(personalOk(p) && key!==digits(p.personal.cpf)){ m.textContent='A chave Pix CPF deve ser o mesmo CPF do seu cadastro.'; return; } }
-  else if(type==='email'){ if(!/^\S+@\S+\.\S+$/.test(key)){ m.textContent='E-mail inválido.'; return; } }
-  else if(type==='phone'){ key=digits(key); if(key.length<10||key.length>11){ m.textContent='Telefone inválido.'; return; } }
-  else { if(!/^[0-9a-f-]{32,36}$/i.test(key)){ m.textContent='Chave aleatória inválida (32 a 36 caracteres).'; return; } }
-  p.pay.pixType=type; p.pay.pixKey=key; saveProfile(p); mm('cheer','Chave Pix salva! 💠'); tabCarteira(); msg($('pixMsg'),'Chave Pix salva ✔',true);
-}
-
-/* ---------- TAB: SEGURANÇA ---------- */
-function tabSeguranca(){
-  const p=session;
-  $('tabBody').innerHTML=`
-    <h2 class="sec">Alterar senha</h2>
-    <label>Senha atual</label><input id="pwCur" type="password" autocomplete="current-password">
-    <label>Nova senha</label><input id="pwNew" type="password" placeholder="mínimo 6 caracteres" autocomplete="new-password">
-    <label>Confirmar nova senha</label><input id="pwNew2" type="password" autocomplete="new-password">
-    <div id="pwMsg" class="err"></div>
-    <button class="bigbtn" id="savePw">Alterar senha</button>
-
-    <h2 class="sec" style="margin-top:24px;">Proteção da conta</h2>
-    <ul class="chk">
-      <li class="ok"><span>✔</span><div>Senha com hash<small>Guardada de forma irreversível (SHA-256 com sal)</small></div></li>
-      <li class="no"><span>○</span><div>Verificação em duas etapas<small>Em breve — depende do servidor da plataforma</small></div></li>
-    </ul>
-
-    <h2 class="sec" style="margin-top:24px;">Zona de risco</h2>
-    <div id="delBox"><button class="bigbtn ghost danger" id="delBtn">Excluir minha conta</button></div>`;
-  $('savePw').addEventListener('click', async ()=>{
-    const m=$('pwMsg'); m.className='err'; m.textContent='';
-    const cur=$('pwCur').value, n1=$('pwNew').value, n2=$('pwNew2').value;
-    if(!(await checkPass(p,cur))){ m.textContent='Senha atual incorreta.'; return; }
-    if(n1.length<6){ m.textContent='A nova senha deve ter pelo menos 6 caracteres.'; return; }
-    if(n1!==n2){ m.textContent='A confirmação não confere.'; return; }
-    p.pass=await makePass(n1); saveProfile(p); mm('cheer','Senha atualizada 🔒'); tabSeguranca(); msg($('pwMsg'),'Senha alterada ✔',true);
-  });
-  $('delBtn').addEventListener('click',()=>{
-    $('delBox').innerHTML=`<p class="muted">Isso apaga seus dados e o saldo de ${fmt(p.balance)} <b>permanentemente</b>. Digite sua senha para confirmar:</p>
-      <input id="delPw" type="password" placeholder="senha"><div id="delMsg" class="err"></div>
-      <div class="row"><button class="bigbtn ghost" id="delCancel">Cancelar</button><button class="bigbtn ghost danger" id="delOk">Excluir</button></div>`;
-    $('delCancel').addEventListener('click',tabSeguranca);
-    $('delOk').addEventListener('click', async ()=>{
-      if(!(await checkPass(p,$('delPw').value))){ $('delMsg').textContent='Senha incorreta.'; return; }
-      try{ localStorage.removeItem('ludopix_profile_'+p.email); }catch(e){}
-      logout();
-    });
-  });
-}
-
-/* ---------- TAB: JOGO RESPONSÁVEL ---------- */
-let pickPause=null, pickExcl=null, confirmKind=null;
-function tabLimites(){
-  const p=session, L=p.limits, lock=lockInfo(p);
-  const bar=(label,key,ms)=>{ const used=usage(p,ms), lim=L[key]; const pct=lim?Math.min(100,used/lim*100):0;
-    return `<label>${label}</label><input id="lim_${key}" type="number" min="0" step="10" placeholder="sem limite" value="${lim||''}">
-      <div class="bar"><i style="width:${pct}%"></i></div><small class="muted">Usado: ${fmt(used)}${lim?' de '+fmt(lim):''}</small>`; };
-  $('tabBody').innerHTML=`
-    <div class="info">Jogue com responsabilidade. Apostas são proibidas para menores de 18 anos e não são uma fonte de renda. Se o jogo deixar de ser diversão, faça uma pausa e procure ajuda profissional.</div>
-    ${lock?`<div class="warn">⛔ <b>${lock.type}</b> ativa até ${new Date(lock.until).toLocaleString('pt-BR')}. Depósitos bloqueados. Saques continuam liberados.</div>`:''}
-
-    <h2 class="sec">Limites de depósito</h2>
-    ${bar('Por dia (24 h)','day',DAY)}
-    ${bar('Por semana (7 dias)','week',7*DAY)}
-    ${bar('Por mês (30 dias)','month',30*DAY)}
-    <div id="limMsg" class="err"></div>
-    <button class="bigbtn" id="saveLim">Salvar limites</button>
-    <p class="muted" style="margin-top:8px;">Deixe em branco para remover o limite.</p>
-
-    <h2 class="sec" style="margin-top:24px;">Pausa temporária</h2>
-    <div class="chips" id="pauseChips">${[[1,'24 horas'],[7,'7 dias'],[30,'30 dias']].map(c=>`<button data-d="${c[0]}" class="${pickPause===c[0]?'on':''}">${c[1]}</button>`).join('')}</div>
-    <h2 class="sec" style="margin-top:18px;">Autoexclusão</h2>
-    <div class="chips" id="exclChips">${[[90,'90 dias'],[180,'6 meses'],[365,'1 ano']].map(c=>`<button data-d="${c[0]}" class="${pickExcl===c[0]?'on':''}">${c[1]}</button>`).join('')}</div>
-    <div id="lockConfirm"></div>
-    ${lock?'<button class="linkbtn" id="clearLock" style="margin-top:14px;">(modo teste) remover bloqueios</button>':''}`;
-  $('saveLim').addEventListener('click',()=>{
-    const v=k=>{ const n=parseFloat($('lim_'+k).value); return n>0?n:null; };
-    const d=v('day'), w=v('week'), mo=v('month'), m=$('limMsg'); m.className='err'; m.textContent='';
-    if(d&&w&&d>w){ m.textContent='O limite diário não pode ser maior que o semanal.'; return; }
-    if(w&&mo&&w>mo){ m.textContent='O limite semanal não pode ser maior que o mensal.'; return; }
-    if(d&&mo&&d>mo){ m.textContent='O limite diário não pode ser maior que o mensal.'; return; }
-    p.limits={day:d,week:w,month:mo}; saveProfile(p); mm('cheer','Limites salvos ✅'); tabLimites(); msg($('limMsg'),'Limites salvos ✔',true);
-  });
-  const askConfirm=(kind,days)=>{
-    const name=kind==='pause'?'Pausa':'Autoexclusão';
-    $('lockConfirm').innerHTML=`<div class="warn" style="margin-top:12px;">${name} de <b>${days} dia(s)</b>: depósitos serão bloqueados e <b>não poderá ser cancelada</b> antes do fim.
-      <div class="row" style="margin-top:10px;"><button class="bigbtn ghost mini" id="lcNo">Cancelar</button><button class="bigbtn mini danger2" id="lcYes">Confirmar ${name.toLowerCase()}</button></div></div>`;
-    $('lcNo').addEventListener('click',()=>{ pickPause=pickExcl=null; tabLimites(); });
-    $('lcYes').addEventListener('click',()=>{ const until=Date.now()+days*DAY; if(kind==='pause') p.pauseUntil=until; else p.exclUntil=until; pickPause=pickExcl=null; saveProfile(p); renderHeader(); tabLimites(); });
-  };
-  $('pauseChips').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{ pickPause=+b.dataset.d; pickExcl=null; tabLimites(); askConfirm('pause',pickPause); }));
-  $('exclChips').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{ pickExcl=+b.dataset.d; pickPause=null; tabLimites(); askConfirm('excl',pickExcl); }));
-  const cl=$('clearLock'); if(cl) cl.addEventListener('click',()=>{ p.pauseUntil=0; p.exclUntil=0; saveProfile(p); renderHeader(); tabLimites(); });
-}
-
-/* ---------- TAB: AJUSTES ---------- */
-function tabAjustes(){
-  const p=session, pf=p.prefs;
-  const sw=(id,on,title,sub)=>`<div class="setrow"><div>${title}<small>${sub}</small></div><label class="sw"><input type="checkbox" id="${id}"${on?' checked':''}><span></span></label></div>`;
-  $('tabBody').innerHTML=`
-    <h2 class="sec">Preferências</h2>
-    ${sw('pf_hide',pf.hideBalance,'Ocultar saldo','Mostra R$ •••• no lugar do valor')}
-    ${sw('pf_conf',pf.confirmPass,'Pedir senha ao sacar','Camada extra de proteção nos saques')}
-    ${sw('pf_mail',pf.emailNotif,'Avisos por e-mail','Preferência salva — o envio depende do servidor')}
-    <h2 class="sec" style="margin-top:22px;">Sobre</h2>
-    <ul class="kv"><li><span>Idioma</span><b>Português (Brasil)</b></li><li><span>Moeda</span><b>Real (BRL)</b></li><li><span>Seu ID</span><b>${p.id}</b></li><li><span>Versão</span><b>Ludo Pix Galaxy · protótipo</b></li></ul>
-    <p class="muted" style="margin-top:12px;">Seus dados ficam apenas neste navegador. Em produção, eles precisam ficar em um servidor seguro e criptografado.</p>`;
-  const bind=(id,key)=>$(id).addEventListener('change',e=>{ pf[key]=e.target.checked; saveProfile(p); renderHeader(); });
-  bind('pf_hide','hideBalance'); bind('pf_conf','confirmPass'); bind('pf_mail','emailNotif');
-}
-
-/* ================= DEPOSIT ================= */
-function backToAccount(tab){ if(tab) activeTab=tab; renderAccount(); showView('view-account'); }
-function openDeposit(){
-  const p=session, lock=lockInfo(p), lv=level(p); let block='';
-  if(lock) block=`<div class="warn">⛔ ${lock.type} ativa até ${new Date(lock.until).toLocaleDateString('pt-BR')}. Depósitos bloqueados.</div>`;
-  else if(lv<2) block=`<div class="warn">Complete seus dados pessoais para depositar.<br><button class="bigbtn mini" id="goData" style="margin-top:8px;">Completar dados</button></div>`;
-  $('depBlock').innerHTML=block;
-  const g=$('goData'); if(g) g.addEventListener('click',()=>backToAccount('perfil'));
-  const blocked=!!block; $('btnPixPay').disabled=blocked; $('btnCardPay').disabled=blocked;
-  const c=p.pay.card; $('savedCardBox').innerHTML=c?`<div class="cardrow" style="margin-bottom:8px;"><span>💳 ${esc(c.brand)} •••• ${esc(c.last4)}</span><small>${esc(c.holder)}</small></div>`:'';
-  if(c && !$('cardName').value) $('cardName').value=c.holder;
-  $('depStatus').textContent=''; buildQr(); showView('view-deposit');
-}
-$('backFromDeposit').addEventListener('click',()=>backToAccount('carteira'));
-$('tabPix').addEventListener('click',()=>{ $('tabPix').classList.add('on'); $('tabCard').classList.remove('on'); $('panelPix').style.display='block'; $('panelCard').style.display='none'; });
-$('tabCard').addEventListener('click',()=>{ $('tabCard').classList.add('on'); $('tabPix').classList.remove('on'); $('panelCard').style.display='block'; $('panelPix').style.display='none'; });
-$('depChips').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
-  $('depChips').querySelectorAll('button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); $('depAmount').value=b.dataset.v; buildQr(); }));
-$('depAmount').addEventListener('input',buildQr);
-function buildQr(){
-  const g=$('qrGrid'); g.innerHTML=''; let seed=parseInt($('depAmount').value)||1;
-  for(let i=0;i<100;i++){ seed=(seed*9301+49297)%233280; const d=document.createElement('div'); if(seed/233280>0.5) d.className='on'; g.appendChild(d); }
-}
-$('cardNum').addEventListener('input',e=>{ e.target.value=digits(e.target.value).slice(0,16).replace(/(.{4})/g,'$1 ').trim(); });
-$('cardExp').addEventListener('input',e=>{ e.target.value=digits(e.target.value).slice(0,4).replace(/(\d{2})(\d)/,'$1/$2'); });
-
-function depositCheck(amount){
-  const p=session, L=p.limits;
-  if(!amount||amount<=0) return 'Informe um valor válido.';
-  if(amount<5) return 'Depósito mínimo: R$ 5,00.';
-  if(amount>5000) return 'Depósito máximo por transação: R$ 5.000,00.';
-  const checks=[['day',DAY,'diário'],['week',7*DAY,'semanal'],['month',30*DAY,'mensal']];
-  for(const c of checks){ if(L[c[0]] && usage(p,c[1])+amount>L[c[0]]) return `Este depósito ultrapassa seu limite ${c[2]} de ${fmt(L[c[0]])} (já usado: ${fmt(usage(p,c[1]))}).`; }
-  return null;
-}
-function confirmDeposit(method,btn){
-  const amount=parseFloat($('depAmount').value), st=$('depStatus'), err=depositCheck(amount);
-  if(err){ st.className='status err'; st.textContent=err; return; }
-  if(method==='Cartão'){
-    const n=digits($('cardNum').value), cvv=digits($('cardCvv').value);
-    if(!session.pay.card){ if(n.length<13){ st.className='status err'; st.textContent='Número de cartão inválido.'; return; } }
-    if(cvv.length<3){ st.className='status err'; st.textContent='Informe o CVV.'; return; }
-  }
-  btn.disabled=true; st.className='status'; st.innerHTML='<div class="spinner"></div>Processando pagamento (simulado)...';
-  setTimeout(()=>{
-    session.balance+=amount; addHistory('in',method==='Pix'?'💠':'💳',`Depósito via ${method}`,amount);
-    ['cardNum','cardExp','cardCvv','cardName'].forEach(id=>{ $(id).value=''; });
-    mm('dance','Depósito confirmado! 💰'); st.textContent='Pagamento confirmado! ✅';
-    setTimeout(()=>{ btn.disabled=false; st.textContent=''; backToAccount('carteira'); },900);
-  },1300);
-}
-$('btnPixPay').addEventListener('click',e=>confirmDeposit('Pix',e.target));
-$('btnCardPay').addEventListener('click',e=>confirmDeposit('Cartão',e.target));
-
-/* ================= WITHDRAW ================= */
-function openWithdraw(){
-  const p=session, lv=level(p); let block='';
-  if(lv<3) block=`<div class="warn">Para sacar é preciso ter a conta <b>verificada</b> (dados completos + documento aprovado).<br><button class="bigbtn mini" id="goVerify" style="margin-top:8px;">Ir para verificação</button></div>`;
-  else if(!p.pay.pixKey) block=`<div class="warn">Cadastre uma <b>chave Pix</b> na aba Carteira para receber seus saques.<br><button class="bigbtn mini" id="goVerify" style="margin-top:8px;">Cadastrar chave</button></div>`;
-  $('wdBlock').innerHTML=block;
-  const g=$('goVerify'); if(g) g.addEventListener('click',()=>backToAccount(lv<3?'perfil':'carteira'));
-  if(block){ $('wdForm').innerHTML=''; }
-  else{
-    const keyShown = p.pay.pixType==='cpf'?maskCPFShow(p.pay.pixKey):p.pay.pixKey;
-    $('wdForm').innerHTML=`
-      <p class="muted">Disponível: <b>${fmt(p.balance)}</b> · mínimo R$ 10,00</p>
-      <label>Valor do saque</label><input id="wdAmount" type="number" min="10" step="1" placeholder="R$">
-      <div class="chips"><button id="wdAll">Tudo</button></div>
-      <label>Chave Pix de destino (${({cpf:'CPF',email:'E-mail',phone:'Telefone',random:'Aleatória'})[p.pay.pixType]})</label>
-      <input value="${esc(keyShown)}" readonly style="opacity:.7">
-      ${p.prefs.confirmPass?'<label>Sua senha</label><input id="wdPw" type="password" autocomplete="current-password">':''}
-      <button class="bigbtn" id="wdGo">Confirmar saque</button>`;
-    $('wdAll').addEventListener('click',()=>{ $('wdAmount').value=Math.floor(p.balance); });
-    $('wdGo').addEventListener('click',doWithdraw);
-  }
-  $('wdStatus').textContent=''; showView('view-withdraw');
-}
-$('backFromWithdraw').addEventListener('click',()=>backToAccount('carteira'));
-async function doWithdraw(){
-  const p=session, st=$('wdStatus'), amount=parseFloat($('wdAmount').value); st.className='status err';
-  if(!amount||amount<10){ st.textContent='Valor mínimo de saque: R$ 10,00.'; return; }
-  if(amount>p.balance){ st.textContent='Saldo insuficiente.'; return; }
-  if(p.prefs.confirmPass && !(await checkPass(p,$('wdPw').value))){ st.textContent='Senha incorreta.'; return; }
-  $('wdGo').disabled=true; st.className='status'; st.innerHTML='<div class="spinner"></div>Enviando Pix (simulado)...';
-  setTimeout(()=>{
-    p.balance-=amount; addHistory('out','⬇️','Saque via Pix',amount);
-    mm('cheer','Saque enviado! 💸'); st.textContent='Saque realizado! ✅'; setTimeout(()=>backToAccount('carteira'),900);
-  },1200);
-}
-
-/* ================= INIT ================= */
-MM=createMascot({el:$('mstage'),sprites:SPRM,charH:124,ground:14,stroll:true,tap:true});
-mm('hello','Olá! Entre ou crie sua conta 👋');
-(function init(){
-  try{ const email=localStorage.getItem('ludopix_current_email'); if(email){ const p=loadProfile(email); if(p){ session=p; saveProfile(p); enterAccount(); } } }catch(e){}
-})();
+initProfile(mascot).catch((err) => {
+  console.error(err);
+  const box = document.getElementById('authErr');
+  if (box) box.textContent = 'Não consegui falar com o servidor. Recarregue a página.';
+});
 </script>
 
 </body>
