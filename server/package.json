@@ -1,0 +1,15 @@
+{
+  "name": "ludo-pix-galaxy-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Servidor do Ludo Pix Galaxy: contas, carteira, partidas e integracao com gateway de pagamento.",
+  "engines": { "node": ">=22.5" },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/index.js",
+    "dev": "node --env-file-if-exists=.env --watch src/index.js",
+    "test": "node --test \"test/*.test.js\""
+  },
+  "comment": "Sem dependencias de terceiros, de proposito: banco via node:sqlite e HTTP via node:http, ambos embutidos no Node 22+. Num servico que guarda dinheiro, cada pacote externo e uma porta a mais de supply chain attack.",
+  "dependencies": {}
+}

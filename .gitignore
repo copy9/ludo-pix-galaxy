@@ -1,0 +1,19 @@
+# Banco de dados — NUNCA versionar: contém dados de jogadores, saldos e CPF.
+server/data/
+*.db
+*.db-wal
+*.db-shm
+
+# Segredos. As chaves do gateway não entram no repositório em hipótese alguma.
+.env
+.env.*
+!.env.example
+
+node_modules/
+npm-debug.log*
+
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
