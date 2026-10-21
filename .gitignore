@@ -1,0 +1,30 @@
+# Dependências
+node_modules/
+
+# Segredos — NUNCA comitar.
+# Se um .env com chave de produção entrar no histórico do git, considere a
+# chave vazada e rode a rotação no provedor, mesmo em repositório privado.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+
+# Documentos de KYC enviados por jogadores: dado pessoal, fora do repositório.
+uploads/
+documentos/
+
+# Logs e artefatos
+*.log
+npm-debug.log*
+coverage/
+dist/
+build/
+.DS_Store
+Thumbs.db
+
+# Editores
+.vscode/
+.idea/
+*.swp

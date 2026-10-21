@@ -1,0 +1,20 @@
+{
+  "name": "ludo-pix-galaxy-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Backend autoritativo do Ludo Pix Galaxy: contas, carteira em ledger, Pix e partidas.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/index.js",
+    "dev": "node --env-file-if-exists=.env --watch src/index.js",
+    "migrate": "node --env-file-if-exists=.env src/db/migrate.js",
+    "reconcile": "node --env-file-if-exists=.env src/scripts/reconcile.js",
+    "test": "node --test \"test/*.test.js\""
+  },
+  "dependencies": {
+    "pg": "^8.13.1"
+  }
+}
