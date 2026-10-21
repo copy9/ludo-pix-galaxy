@@ -262,9 +262,13 @@ CREATE TABLE withdrawals (
   amount_cents       BIGINT NOT NULL CHECK (amount_cents > 0),
   status             withdrawal_status NOT NULL DEFAULT 'pending_review',
   pix_key_type       TEXT NOT NULL,
-  -- Chave Pix guardada em hash + sufixo visível, mesma lógica do CPF.
+  -- A chave Pix em três formas, cada uma com um propósito:
+  --   hash   → comparação por igualdade (a chave é do titular?) sem guardar o número
+  --   masked → o que aparece na tela do jogador
+  --   sealed → AES-256-GCM, a única que volta ao claro, e só no envio do Pix
   pix_key_hash       TEXT NOT NULL,
   pix_key_masked     TEXT NOT NULL,
+  pix_key_sealed     TEXT NOT NULL,
   provider           TEXT,
   provider_payout_id TEXT,
   reviewed_by        UUID REFERENCES users(id),

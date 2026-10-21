@@ -195,13 +195,17 @@ export async function statement(client, userId, { limit = 50, before } = {}) {
  * pelo alarme — não por um jogador reclamando.
  */
 export async function reconcile(client) {
+  // O cast para ::bigint é obrigatório: SUM() sobre bigint devolve `numeric`,
+  // que o driver entrega como STRING para não perder precisão. Sem o cast,
+  // `computed` viria '1000' e qualquer comparação estrita com 1000 falharia
+  // em silêncio — justamente no código que deveria detectar divergência.
   const { rows: totals } = await client.query(
-    `SELECT COALESCE(SUM(amount_cents), 0) AS total FROM ledger_entries`,
+    `SELECT COALESCE(SUM(amount_cents), 0)::bigint AS total FROM ledger_entries`,
   );
   const { rows: drift } = await client.query(
     `SELECT a.id, a.kind, a.system_key, a.user_id,
             a.balance_cents AS cached,
-            COALESCE(SUM(e.amount_cents), 0) AS computed
+            COALESCE(SUM(e.amount_cents), 0)::bigint AS computed
        FROM accounts a
        LEFT JOIN ledger_entries e ON e.account_id = a.id
       GROUP BY a.id
