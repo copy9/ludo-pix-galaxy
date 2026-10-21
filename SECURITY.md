@@ -126,6 +126,67 @@ navegador **direto** para ele e você recebe só um token. Isso te coloca em
 
 ---
 
+## Auditoria independente
+
+Um auditor que não escreveu este código subiu o servidor e tentou explorar cada
+hipótese na prática. Achados e o que foi feito:
+
+| # | Gravidade | Achado | Situação |
+|---|---|---|---|
+| 1 | **Alta** | Dinheiro preso para sempre em partida abandonada | **corrigido** |
+| 2 | Alta (dev) | Webhook sem segredo aceitava evento forjado | **corrigido** |
+| 3 | Média | Limite de depósito burlável com cobranças pendentes | **corrigido** |
+| 4 | Baixa | Enumeração de usuário no cadastro | **aberto** (ver abaixo) |
+| 5 | Baixa | Anti-CSRF pulado sem header `Origin` | **corrigido** |
+| 6 | Baixa | `?limit=-1` virava "sem limite" no SQLite | **corrigido** |
+
+### #1 — o que estava errado (o mais grave)
+
+Depois que os dois jogadores apostavam, o **único** caminho que esvaziava o
+escrow era a partida terminar. Não havia W.O., timeout nem reembolso:
+`cancelChallenge` recusava porque a partida já começara, e `expireStale` só
+olhava desafios ainda aguardando alguém aceitar. Jogador que fechasse o
+navegador deixava as duas apostas travadas **permanentemente** — nenhum dos
+dois recebia e a casa não ficava com nada.
+
+Pior que o dinheiro parado era o incentivo: quem estava perdendo ganhava motivo
+para sumir. *"Se eu não posso ganhar, ninguém saca."*
+
+Agora existe `forfeitIdle()`, rodando a cada minuto:
+
+- **Ninguém jogou ainda** → devolve a aposta aos dois, sem comissão. Cobrar de
+  uma partida que não aconteceu seria indefensável.
+- **A partida andou e parou** → quem tinha a vez perde por W.O., o prêmio sai
+  normalmente com comissão. Abandonar passa a custar a aposta.
+
+Também há `POST /api/challenges/:code/forfeit` para desistir na hora.
+O tempo de inatividade é `MATCH_IDLE_MS` (padrão 15 min).
+
+### #4 — enumeração de usuário: por que segue aberto
+
+O cadastro devolve **409** quando o e-mail já tem conta e **200** quando não
+tem. Dá para varrer uma lista e descobrir quem é cliente da plataforma — o que,
+num site de apostas, é informação sensível por si só.
+
+Não "corrigi" porque toda correção superficial é teatro: se o cadastro cria
+sessão na hora, a resposta **precisa** diferir entre e-mail novo e existente.
+Fechar isso de verdade exige **confirmação por e-mail** — o cadastro responde
+sempre igual ("enviamos um link, confira sua caixa") e a conta só nasce quando
+o link é aberto. É uma funcionalidade, não um ajuste, e ela precisa existir de
+qualquer forma antes de aceitar dinheiro.
+
+O login, esse, já está defendido: erro genérico e tempo de resposta igualado
+com uma verificação falsa, para não denunciar quais e-mails existem.
+
+### O que o auditor tentou e não conseguiu furar
+
+Saque duplo em paralelo, saldo negativo, dinheiro criado, prêmio pago em dobro,
+replay de webhook (três camadas de idempotência), rollback de transação
+aninhada, `tokenIdx` malicioso (`-1`, `1.5`, `{}`, `1e308`, …), trava otimista
+na rolagem, timing attack no login, travessia de caminho, SQL injection e XSS.
+
+---
+
 ## Antes de ir ao ar
 
 ### Obrigatório
@@ -143,6 +204,8 @@ navegador **direto** para ele e você recebe só um token. Isso te coloca em
 - [ ] **Backup do banco** (`server/data/ludopix.db`) com teste de restauração.
       Backup que nunca foi restaurado não é backup.
 - [ ] **KYC de verdade** antes do primeiro saque.
+- [ ] **Confirmação de e-mail no cadastro** — fecha o achado #4 e é pré-requisito
+      para recuperação de senha.
 - [ ] Rodar `GET /api/_audit` periodicamente e **alertar** se `ok:false`.
 
 ### Fortemente recomendado

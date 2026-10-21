@@ -94,6 +94,7 @@ const LP = (function () {
     createChallenge: (stakeCents)     => post('/api/challenges', { stakeCents }),
     acceptChallenge: (code)           => post(`/api/challenges/${encodeURIComponent(code)}/accept`),
     cancelChallenge: (code)           => post(`/api/challenges/${encodeURIComponent(code)}/cancel`),
+    forfeit:         (code)           => post(`/api/challenges/${encodeURIComponent(code)}/forfeit`),
     getChallenge:    (code)           => get(`/api/challenges/${encodeURIComponent(code)}`),
     roll: (code, version)             => post(`/api/challenges/${encodeURIComponent(code)}/roll`, { version }),
     move: (code, tokenIdx, version)   => post(`/api/challenges/${encodeURIComponent(code)}/move`, { tokenIdx, version }),

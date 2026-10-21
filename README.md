@@ -23,7 +23,7 @@ Não existe `npm install`: o projeto não tem dependências. Requer **Node 22.5+
 O servidor também serve o front, então abra `http://localhost:3000` e pronto.
 
 ```bash
-npm test            # 54 testes
+npm test            # 82 testes
 ```
 
 ### Abrir só o front
@@ -109,6 +109,7 @@ Variáveis de ambiente (nenhuma obrigatória em desenvolvimento):
 | `ADMIN_TOKEN` | protege `GET /api/_audit` |
 | `ALLOWED_ORIGINS` | origens extras permitidas em POST (anti-CSRF) |
 | `TRUST_PROXY` | `1` quando houver proxy/CDN na frente |
+| `MATCH_IDLE_MS` | inatividade até encerrar partida abandonada (padrão 15 min) |
 
 ---
 
@@ -136,6 +137,7 @@ POST /api/challenges                 {stakeCents}
 GET  /api/challenges/:code
 POST /api/challenges/:code/accept
 POST /api/challenges/:code/cancel
+POST /api/challenges/:code/forfeit   (desistir; o adversario vence)
 POST /api/challenges/:code/roll      {version}
 POST /api/challenges/:code/move      {tokenIdx, version}
 

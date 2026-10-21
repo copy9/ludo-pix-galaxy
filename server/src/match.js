@@ -251,7 +251,7 @@ export const makeMove = db.transaction(({ code, userId, tokenIdx, version }) => 
  * Paga o vencedor e a comissao, esvaziando o escrow.
  * Nao e exportado para rota nenhuma: so o fim de partida chama.
  */
-const settle = db.transaction(({ code, winnerColor }) => {
+const settle = db.transaction(({ code, winnerColor, motivo = null }) => {
   const ch = db.prepare('SELECT * FROM challenges WHERE code = ?').get(code);
   if (!ch || ch.status === 'resolved') return;
 
@@ -270,14 +270,23 @@ const settle = db.transaction(({ code, winnerColor }) => {
     postTransaction({
       kind: 'payout',
       idempotencyKey: `payout:${code}`,   // pagar duas vezes e impossivel
-      memo: `premio do desafio ${code}`,
+      memo: motivo ? `premio do desafio ${code} (${motivo})` : `premio do desafio ${code}`,
       entries,
     });
   }
 
   db.prepare(`UPDATE challenges SET status='resolved', winner_id=?, resolved_at=? WHERE code=?`)
     .run(winnerId, Date.now(), code);
-  audit(winnerId, 'challenge.resolved', { code, pot });
+
+  /* Marca o fim tambem no estado da partida: sem isto, quem reabrir a pagina
+     depois de um W.O. veria uma partida eternamente "em andamento". */
+  const m = loadMatch(code);
+  if (m && !m.state.gameOver) {
+    const fim = { ...m.state, gameOver: true, winnerColor, dice: null, endedBy: motivo };
+    db.prepare('UPDATE matches SET state_json=?, version=version+1, updated_at=? WHERE code=?')
+      .run(JSON.stringify(fim), Date.now(), code);
+  }
+  audit(winnerId, 'challenge.resolved', { code, pot, motivo });
 });
 
 /** Desafio aberto que ninguem aceitou: devolve a aposta de quem criou. */
@@ -299,6 +308,79 @@ export const expireStale = db.transaction(() => {
     db.prepare(`UPDATE challenges SET status='expired', resolved_at=? WHERE code=?`).run(now, ch.code);
   }
   return stale.length;
+});
+
+/* ----------------------------------------------- partida abandonada
+ *
+ * Sem isto, o escrow de uma partida comecada so esvaziava quando ela TERMINAVA.
+ * Jogador que fecha o navegador no meio deixava as duas apostas presas para
+ * sempre: cancelar e recusado porque a partida ja comecou, e expireStale so
+ * olha desafio que ninguem aceitou.
+ *
+ * Pior que o dinheiro parado era o incentivo: quem estava perdendo ganhava
+ * motivo para sumir — "se eu nao posso ganhar, ninguem saca".
+ *
+ * Regra adotada:
+ *   - ninguem jogou nada ainda  -> devolve a aposta aos dois (ninguem se
+ *     comprometeu, e cobrar comissao de uma partida que nao aconteceu e roubo);
+ *   - a partida andou e parou   -> quem tinha a vez perde por W.O., e o premio
+ *     sai normalmente, com comissao. Abandonar passa a custar a aposta.
+ */
+export const MATCH_IDLE_MS = Number(process.env.MATCH_IDLE_MS) || 15 * 60 * 1000;
+
+export const forfeitIdle = db.transaction(() => {
+  const limite = Date.now() - MATCH_IDLE_MS;
+  const paradas = db.prepare(`
+    SELECT c.*, m.state_json, m.updated_at
+    FROM challenges c JOIN matches m ON m.code = c.code
+    WHERE c.status = 'both_staked' AND m.updated_at < ?`).all(limite);
+
+  let encerradas = 0;
+  for (const row of paradas) {
+    const st = JSON.parse(row.state_json);
+    const comecou = (st.nonce || 0) > 0;
+
+    if (!comecou) {
+      // Ninguem rolou o dado sequer: devolve integralmente aos dois.
+      for (const uid of [row.creator_id, row.opponent_id]) {
+        if (!uid || row.stake_cents <= 0) continue;
+        postTransaction({
+          kind: 'refund',
+          idempotencyKey: `refund-idle:${row.code}:${uid}`,
+          memo: `partida ${row.code} abandonada antes de comecar`,
+          entries: [
+            { account: escrowAccount(row.code), amount_cents: -row.stake_cents },
+            { account: userAccount(uid), amount_cents: +row.stake_cents },
+          ],
+        });
+      }
+      db.prepare(`UPDATE challenges SET status='cancelled', resolved_at=? WHERE code=?`)
+        .run(Date.now(), row.code);
+      audit(null, 'match.abandoned_before_start', { code: row.code });
+    } else {
+      // Quem tinha a vez e nao jogou perde por W.O.
+      const corDaVez = st.players[st.curIdx].color;
+      const vencedor = corDaVez === 'red' ? 'blue' : 'red';
+      settle({ code: row.code, winnerColor: vencedor, motivo: 'W.O. por inatividade' });
+      audit(null, 'match.forfeit', { code: row.code, abandonou: corDaVez });
+    }
+    encerradas++;
+  }
+  return encerradas;
+});
+
+/** Desistir na hora, sem esperar o timeout. O adversario vence. */
+export const forfeit = db.transaction(({ code, userId }) => {
+  const ch = db.prepare('SELECT * FROM challenges WHERE code = ?').get(code);
+  if (!ch) throw Object.assign(new Error('partida nao encontrada'), { code: 'NOT_FOUND' });
+  const cor = colorOf(ch, userId);
+  if (!cor) throw Object.assign(new Error('voce nao esta nesta partida'), { code: 'FORBIDDEN' });
+  if (ch.status !== 'both_staked')
+    throw Object.assign(new Error('partida nao esta em andamento'), { code: 'NOT_PLAYING' });
+
+  settle({ code, winnerColor: cor === 'red' ? 'blue' : 'red', motivo: 'desistencia' });
+  audit(userId, 'match.forfeit_voluntario', { code });
+  return { ok: true };
 });
 
 export { loadMatch };

@@ -225,7 +225,9 @@ router.get('/api/wallet', (ctx) => {
   const u = auth(ctx); if (!u) return;
   json(ctx.res, 200, {
     balanceCents: balanceOf(userAccount(u.id)),
-    entries: statement(u.id, Math.min(100, toInt(ctx.query.get('limit')) || 50)),
+    // Math.max: no SQLite, LIMIT -1 significa "sem limite", entao ?limit=-1
+    // devolvia o extrato inteiro de uma vez.
+    entries: statement(u.id, Math.max(1, Math.min(100, toInt(ctx.query.get('limit')) || 50))),
   });
 });
 
@@ -297,6 +299,12 @@ router.get('/api/challenges/:code', (ctx) => {
     }
     json(ctx.res, 200, Match.publicState(ch, m, u.id));
   } catch (err) { fail(ctx.res, err); }
+});
+
+router.post('/api/challenges/:code/forfeit', (ctx) => {
+  const u = auth(ctx); if (!u) return;
+  try { json(ctx.res, 200, Match.forfeit({ code: ctx.params.code.toUpperCase(), userId: u.id })); }
+  catch (err) { fail(ctx.res, err); }
 });
 
 router.post('/api/challenges/:code/roll', (ctx) => {
@@ -422,12 +430,27 @@ const server = http.createServer(async (req, res) => {
       /* Anti-CSRF: so aceitamos POST vindo da nossa propria origem.
          O cookie de sessao e SameSite=Lax, o que ja barra a maioria dos casos;
          conferir Origin fecha o resto. */
+      const allowed = (process.env.ALLOWED_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean);
       const origin = req.headers.origin;
+      const referer = req.headers.referer;
+      const temSessao = !!parseCookies(req.headers.cookie)[SESSION_COOKIE];
+
+      const okOrigem = (valor) => {
+        try {
+          const u = new URL(valor);
+          return u.host === req.headers.host || allowed.includes(u.origin);
+        } catch { return false; }
+      };
+
       if (origin) {
-        const allowed = (process.env.ALLOWED_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean);
-        const sameHost = new URL(origin).host === req.headers.host;
-        if (!sameHost && !allowed.includes(origin))
-          return json(res, 403, { error: 'origem_nao_permitida' });
+        if (!okOrigem(origin)) return json(res, 403, { error: 'origem_nao_permitida' });
+      } else if (temSessao) {
+        /* Sem `Origin`, antes a checagem era simplesmente PULADA — a defesa
+           virava apenas o SameSite=Lax do cookie. Numa requisicao que carrega
+           sessao, ausencia de origem e sinal de que ela nao veio da nossa
+           pagina, entao exigimos ao menos um Referer nosso. */
+        if (!referer || !okOrigem(referer))
+          return json(res, 403, { error: 'origem_ausente' });
       }
       const raw = await readBody(req);
       if (raw.length) {
@@ -446,8 +469,15 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-// Devolve apostas de desafios que ninguem aceitou.
-setInterval(() => { try { Match.expireStale(); } catch (e) { console.error(e); } }, 10 * 60 * 1000).unref();
+/* Faxina periodica. Sem ela, dinheiro fica preso:
+   - expireStale: desafio que ninguem aceitou -> devolve ao criador;
+   - forfeitIdle: partida comecada e abandonada -> W.O. ou reembolso.
+   Roda a cada minuto porque o segundo caso envolve dinheiro de DOIS jogadores
+   parado, e ninguem deve esperar dez minutos para receber o que e seu. */
+setInterval(() => {
+  try { Match.expireStale(); } catch (e) { console.error('[faxina] expireStale', e); }
+  try { Match.forfeitIdle(); } catch (e) { console.error('[faxina] forfeitIdle', e); }
+}, 60 * 1000).unref();
 
 if (process.env.NODE_ENV === 'production') {
   for (const v of ['PSP_API_KEY', 'PSP_WEBHOOK_SECRET']) {

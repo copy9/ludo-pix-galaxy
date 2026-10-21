@@ -335,7 +335,18 @@ function render(c, st){
       <p class="muted" style="margin-top:16px;">
         O resultado é apurado pelo servidor quando a partida terminar — ninguém precisa confirmar nada.
       </p>
+      ${st.stakeCents>0?`<p class="muted" style="font-size:12px;">
+        Se alguém abandonar a partida, ela é encerrada por inatividade: quem ficou leva o prêmio.
+        Ninguém fica com a aposta presa.
+      </p>`:''}
+      <button class="bigbtn ghost" id="giveUpBtn">Desistir da partida</button>
     `);
+    $('giveUpBtn').addEventListener('click',async()=>{
+      if(!confirm('Desistir da partida? Seu adversário leva o prêmio e isso não pode ser desfeito.')) return;
+      const b=$('giveUpBtn'); b.disabled=true;
+      try{ await LP.forfeit(c); await refreshMe(); }
+      catch(err){ b.disabled=false; alert(errText(err)); }
+    });
     return;
   }
 

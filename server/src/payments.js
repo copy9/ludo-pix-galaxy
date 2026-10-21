@@ -58,7 +58,17 @@ export const gateway = {
    */
   verifyWebhook({ rawBody, signature }) {
     const secret = process.env.PSP_WEBHOOK_SECRET;
-    if (!secret) return process.env.NODE_ENV !== 'production';   // so em dev
+    /* Falha FECHADA: sem segredo configurado, nada e aceito.
+       Antes isto devolvia `true` fora de producao — ou seja, em dev/staging
+       qualquer POST nao assinado era tratado como evento legitimo do gateway,
+       e como o proprio cliente recebe o `ref` da cobranca ao pedir o deposito,
+       bastava ele forjar o evento para creditar o valor que quisesse.
+       Produção já recusava subir sem o segredo, mas "permitir" nunca pode ser o
+       padrao silencioso de uma verificacao de assinatura. */
+    if (!secret) {
+      console.warn('[webhook] PSP_WEBHOOK_SECRET nao definido: todos os eventos serao recusados.');
+      return false;
+    }
     if (!signature) return false;
     const expected = createHmac('sha256', secret).update(rawBody).digest('hex');
     const a = Buffer.from(expected, 'utf8');
@@ -81,11 +91,22 @@ export const gateway = {
 
 /* --------------------------------------------------------- limites */
 
-/** Soma depositada numa janela de tempo, para os limites de jogo responsavel. */
+/**
+ * Soma depositada numa janela de tempo, para os limites de jogo responsavel.
+ *
+ * Conta `paid` E `pending`. Contar so o que ja foi pago parece certo e nao e:
+ * o limite e conferido na CRIACAO do deposito, e o credito acontece depois, no
+ * webhook. Entao bastava criar varias cobrancas abaixo do limite — nenhuma
+ * delas `paid` ainda, todas passando na checagem — e pagar todas em seguida.
+ * Com limite diario de R$100 dava para entrar com R$270.
+ *
+ * Cobranca pendente expira no gateway; se nao virar `paid`, o status deve ser
+ * atualizado para `failed` pelo webhook e ela sai desta conta.
+ */
 export function depositedSince(userId, sinceMs) {
   const row = db.prepare(`
     SELECT COALESCE(SUM(amount_cents),0) AS total FROM payments
-    WHERE user_id=? AND direction='in' AND status='paid' AND created_at >= ?`)
+    WHERE user_id=? AND direction='in' AND status IN ('paid','pending') AND created_at >= ?`)
     .get(userId, sinceMs);
   return row.total;
 }
