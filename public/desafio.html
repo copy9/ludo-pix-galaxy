@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ludo Pix Galaxy — Desafio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700&family=Orbitron:wght@600;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    box-sizing:border-box;
+    --void:#05030f; --deep:#0c0724; --violet:#7b5cff; --magenta:#ff3dcb; --cyan:#2de2ff; --gold:#ffe27a;
+    --card:rgba(20,12,56,.58); --glass-brd:rgba(140,160,255,.30); --text:#eaf0ff;
+    --red:#ff3d81; --green:#2bffb0; --yellow:#ffc94d; --blue:#4d8bff; --ok:#2bffb0; --err:#ff6b8b;
+    --display:'Orbitron','Segoe UI',system-ui,sans-serif; --body:'Exo 2','Segoe UI',system-ui,sans-serif;
+    padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:border-box;}
+  html{scroll-padding-top:env(safe-area-inset-top,0px); background:var(--void);}
+  body{
+    margin:0; min-height:100vh; font-family:var(--body); color:var(--text);
+    background:
+      radial-gradient(ellipse at 15% 8%, rgba(123,92,255,.38), transparent 50%),
+      radial-gradient(ellipse at 88% 18%, rgba(255,61,203,.26), transparent 45%),
+      radial-gradient(ellipse at 60% 95%, rgba(45,226,255,.22), transparent 50%),
+      linear-gradient(180deg,#0a0624,#05030f 70%);
+    display:flex; flex-direction:column; align-items:center; padding:16px 12px 32px;
+  }
+  body::before,body::after{ content:''; position:fixed; inset:0; z-index:-1; pointer-events:none; }
+  body::before{
+    background-image:
+      radial-gradient(1.5px 1.5px at 20px 30px,#fff,transparent),
+      radial-gradient(1px 1px at 90px 120px,#cfe3ff,transparent),
+      radial-gradient(1.5px 1.5px at 160px 60px,#ffe9c7,transparent),
+      radial-gradient(1px 1px at 230px 180px,#fff,transparent),
+      radial-gradient(2px 2px at 300px 90px,#b9a8ff,transparent);
+    background-size:320px 220px; animation:twinkle 5s ease-in-out infinite alternate;
+  }
+  body::after{
+    background-image:
+      radial-gradient(1px 1px at 60px 40px,#fff,transparent),
+      radial-gradient(1.5px 1.5px at 210px 150px,#9fe9ff,transparent),
+      radial-gradient(1px 1px at 380px 260px,#fff,transparent),
+      radial-gradient(1.5px 1.5px at 120px 300px,#ffc0ee,transparent);
+    background-size:470px 340px; animation:drift 90s linear infinite, twinkle 7s ease-in-out infinite alternate-reverse;
+  }
+  @keyframes twinkle{ from{opacity:.45;} to{opacity:1;} }
+  @keyframes drift{ from{background-position:0 0;} to{background-position:470px 340px;} }
+
+  h1,h1.logo{
+    font-family:var(--display); font-weight:800; font-size:24px; letter-spacing:3px; text-transform:uppercase;
+    text-align:center; margin:8px 0 14px; color:#fff; text-shadow:0 0 18px rgba(123,92,255,.9);
+  }
+  h1 span,.logo span{
+    background:linear-gradient(90deg,var(--cyan),#a78bff 50%,var(--magenta)); -webkit-background-clip:text; background-clip:text;
+    color:transparent; -webkit-text-fill-color:transparent; text-shadow:none; filter:drop-shadow(0 0 10px rgba(45,226,255,.6));
+  }
+  .sub,.tag{ font-size:13px; opacity:.7; text-align:center; margin-bottom:18px; }
+
+  .card,#setup{
+    background:var(--card); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+    border:1px solid var(--glass-brd); border-radius:24px; padding:26px 22px; width:100%; max-width:380px;
+    box-shadow:0 0 0 1px rgba(45,226,255,.06), 0 24px 50px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.08);
+  }
+  label{ display:block; font-size:12px; opacity:.8; margin:10px 0 4px; letter-spacing:.4px; }
+  input{
+    width:100%; padding:12px; border-radius:12px; font-size:15px; font-family:var(--body);
+    background:rgba(255,255,255,.07); color:#fff; border:1px solid var(--glass-brd); outline:none;
+  }
+  input::placeholder{ color:rgba(234,240,255,.4); }
+  input:focus{ border-color:var(--cyan); box-shadow:0 0 14px rgba(45,226,255,.45); }
+  input[type=checkbox]{ width:auto; accent-color:var(--violet); }
+
+  .bigbtn{
+    display:block; width:100%; padding:15px; margin-top:14px; border:none; border-radius:14px; cursor:pointer;
+    font-family:var(--display); font-size:13px; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; color:#fff;
+    background:linear-gradient(135deg,var(--cyan),var(--violet) 55%,#c13dff);
+    box-shadow:0 0 26px rgba(123,92,255,.55), inset 0 1px 0 rgba(255,255,255,.4); transition:transform .12s, box-shadow .12s, filter .12s;
+  }
+  .bigbtn:hover{ filter:brightness(1.12); }
+  .bigbtn:active{ transform:scale(.96); box-shadow:0 0 12px rgba(123,92,255,.5); }
+  .bigbtn:disabled{ opacity:.4; cursor:not-allowed; }
+  .bigbtn.ghost{ background:rgba(255,255,255,.06); border:1px solid var(--glass-brd); box-shadow:none; color:#dfe6ff; }
+  .muted{ opacity:.8; font-size:13px; line-height:1.55; }
+  .err{ color:var(--err); font-size:13px; min-height:16px; margin-top:8px; }
+  .code{ background:rgba(255,255,255,.05); border:1px dashed var(--glass-brd); border-radius:12px; padding:12px;
+    font-size:12px; word-break:break-all; margin:10px 0; text-align:center; }
+  .row{ display:flex; gap:10px; }
+
+  .tabs,.tabs2{ display:flex; gap:8px; margin-bottom:14px; }
+  .tabs button,.tabs2 button{
+    flex:1; padding:10px; border-radius:12px; font-weight:700; cursor:pointer; font-family:var(--body); font-size:13px;
+    background:rgba(255,255,255,.05); border:1px solid var(--glass-brd); color:#fff; opacity:.65;
+  }
+  .tabs button.on,.tabs2 button.on{ opacity:1; background:linear-gradient(135deg,var(--cyan),var(--violet)); border-color:transparent;
+    box-shadow:0 0 16px rgba(45,226,255,.45); }
+
+  .badge{ display:inline-flex; align-items:center; gap:5px; padding:5px 13px; border-radius:999px; font-size:12px; font-weight:700;
+    box-shadow:0 0 14px rgba(0,0,0,.4); }
+  .badge.win{ background:linear-gradient(135deg,#2bffb0,#119b6b); color:#03281c; }
+  .badge.lose{ background:linear-gradient(135deg,#ff7aa0,#d1285a); }
+  .badge.wait{ background:linear-gradient(135deg,#ffe27a,#e0a63a); color:#3a2600; }
+  .spinner{ width:24px; height:24px; border:3px solid rgba(255,255,255,.18); border-top-color:var(--cyan); border-radius:50%;
+    animation:spin .7s linear infinite; margin:10px auto; box-shadow:0 0 12px rgba(45,226,255,.4); }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  #homeLink,#muteBtn{
+    position:fixed; top:calc(10px + env(safe-area-inset-top,0px)); z-index:40; color:#fff; text-decoration:none;
+    background:var(--card); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border:1px solid var(--glass-brd);
+    font-family:var(--body); font-size:13px; font-weight:700; border-radius:999px; cursor:pointer;
+  }
+  #homeLink{ left:10px; padding:8px 14px; }
+  #muteBtn{ right:10px; width:34px; height:34px; font-size:15px; padding:0; }
+  body{ padding-top:58px; }
+  .mhero{ position:relative; width:100%; max-width:420px; height:176px; border-radius:24px; overflow:hidden; margin:0 auto 14px; cursor:pointer;
+    border:1px solid var(--glass-brd); box-shadow:0 0 30px rgba(123,92,255,.4), 0 14px 30px rgba(0,0,0,.45);
+    background:
+      radial-gradient(1.4px 1.4px at 12% 20%,#fff,transparent), radial-gradient(1px 1px at 80% 14%,#cfe3ff,transparent),
+      radial-gradient(1.2px 1.2px at 30% 60%,#ffe9c7,transparent), radial-gradient(1px 1px at 90% 50%,#fff,transparent),
+      radial-gradient(1px 1px at 55% 22%,#fff,transparent), radial-gradient(1.2px 1.2px at 68% 66%,#b9a8ff,transparent),
+      linear-gradient(180deg,#0a0630 0%,#1a0f5c 60%,#2b1274 100%); }
+  .mhero .mneb{ position:absolute; border-radius:50%; filter:blur(30px); opacity:.5; pointer-events:none; animation:mDrift 12s ease-in-out infinite alternate; }
+  .mhero .mn1{ width:150px; height:110px; left:-30px; top:10px; background:#ff3dcb; }
+  .mhero .mn2{ width:160px; height:120px; right:-40px; top:30px; background:#2de2ff; animation-delay:-5s; }
+  @keyframes mDrift{ from{ transform:translate(0,0) scale(1);} to{ transform:translate(18px,-10px) scale(1.16);} }
+  .mhero .morb{ position:absolute; font-size:20px; filter:drop-shadow(0 0 6px rgba(255,255,255,.7)); animation:mFloat 5s ease-in-out infinite alternate; pointer-events:none; }
+  .mhero .mo1{ left:9%; top:16%; } .mhero .mo2{ right:10%; top:12%; animation-delay:-2s; font-size:17px; }
+  @keyframes mFloat{ from{ transform:translateY(0) rotate(-6deg);} to{ transform:translateY(-10px) rotate(8deg);} }
+  .mhero .mpad{ position:absolute; left:50%; bottom:2px; width:250px; height:40px; margin-left:-125px; border-radius:50%; pointer-events:none;
+    background:radial-gradient(ellipse,rgba(143,107,255,.95),rgba(74,43,184,.55) 50%,transparent 72%); box-shadow:0 0 30px rgba(123,92,255,.6); }
+  .mhero .m-stage{ position:absolute; inset:0; }
+  .m-dancer{ position:absolute; inset:0; pointer-events:none; }
+  .m-bubble{ position:absolute; top:8px; left:50%; transform:translateX(-50%) scale(.6); opacity:0; background:rgba(255,255,255,.96); color:#2a1660;
+    padding:7px 13px; border-radius:16px; font-weight:700; font-size:12px; width:max-content; max-width:230px; text-align:center;
+    box-shadow:0 8px 22px rgba(0,0,0,.4); transition:opacity .25s, transform .25s; z-index:6; pointer-events:none; }
+  .m-bubble.show{ opacity:1; transform:translateX(-50%) scale(1); }
+  .m-bubble::after{ content:''; position:absolute; left:50%; bottom:-6px; margin-left:-6px; width:12px; height:12px; background:inherit; transform:rotate(45deg); border-radius:3px; }
+  #ctlMascot{ position:relative; width:84px; height:118px; flex-shrink:0; }
+  #ctlMascot .m-bubble{ top:auto; bottom:100%; left:0; transform:scale(.6); transform-origin:bottom left; margin-bottom:6px; }
+  #ctlMascot .m-bubble.show{ transform:scale(1); }
+  #ctlMascot .m-bubble::after{ left:22px; }
+</style>
+</head>
+<body>
+<button id="muteBtn" title="Música">🎵</button>
+<a id="homeLink" href="index.html">🏠 Início</a>
+<h1>🪐 Desafio <span>Galaxy</span></h1>
+<div class="sub">Desafie um amigo e conquiste a galáxia</div>
+<div class="mhero" id="mhero"><div class="mneb mn1"></div><div class="mneb mn2"></div><span class="morb mo1">🌙</span><span class="morb mo2">☄️</span><div class="mpad"></div><div class="m-stage" id="mstage"></div></div>
+<div class="card" id="app"><div class="spinner"></div></div>
+
+<script>
+/* Organic dancer engine.
+   createDancer({el, sprites, heights, base, rx, surfaceR, anchorBottom, onSay, onKey})
+   keys: {p:pose, d:ms, f:0|1, x:(fraction*rx), xTo, y, r(deg), sx, sy, say, gait}
+   API: run(keys,{loop}), interrupt(keys,{restart}), xFrac(), destroy(), mode */
+function createDancer(o){
+  const SPR=o.sprites, HT=o.heights, BASE=o.base||{}, rx=o.rx||(()=>1), R=o.surfaceR||0, AB=o.anchorBottom||0;
+  const wrap=o.el, names=Object.keys(HT), clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const cv=document.createElement('canvas'); cv.style.cssText='position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;display:block;';
+  wrap.appendChild(cv);
+  let gl=null; try{ gl=cv.getContext('webgl',{alpha:true,premultipliedAlpha:true,antialias:true}); }catch(e){ gl=null; }
+  const dpr=Math.min(2,window.devicePixelRatio||1); let W=1,Hc=1;
+  function resize(){ W=Math.max(1,wrap.clientWidth); Hc=Math.max(1,wrap.clientHeight); cv.width=Math.round(W*dpr); cv.height=Math.round(Hc*dpr); if(gl) gl.viewport(0,0,cv.width,cv.height); }
+  resize(); window.addEventListener('resize',resize);
+
+  /* ---------- WebGL setup ---------- */
+  let prog=null, U={}, tex={}, aUV=null, nIdx=0, domImgs={}, loaded=0, ready=false;
+  if(gl){
+    try{
+      const vs=`attribute vec2 a_uv; uniform vec2 u_canvas,u_size,u_anchor,u_scale,u_hair; uniform float u_rot,u_breath,u_shear,u_t,u_flip; varying vec2 v_uv;
+      void main(){
+        vec2 uv=a_uv; vec2 p=vec2((uv.x-0.5)*u_size.x,(uv.y-1.0)*u_size.y);
+        float ax=abs(uv.x-0.5)*2.0; float w=smoothstep(0.30,0.95,ax)*smoothstep(0.12,0.85,uv.y);
+        float wob=sin(u_t*2.7+uv.y*6.0+(uv.x-0.5)*4.0);
+        p.x+=(u_hair.x+wob*1.5)*w; p.y+=u_hair.y*w;
+        p.y+=u_breath*(1.0-uv.y)*0.6; p.x+=u_shear*(-p.y);
+        p*=u_scale; float c=cos(u_rot), s=sin(u_rot); p=vec2(c*p.x-s*p.y, s*p.x+c*p.y);
+        vec2 pos=u_anchor+p; gl_Position=vec4(pos.x/u_canvas.x*2.0-1.0, 1.0-pos.y/u_canvas.y*2.0, 0.0, 1.0);
+        v_uv=vec2(u_flip>0.5?1.0-uv.x:uv.x, uv.y);
+      }`;
+      const fs=`precision mediump float; varying vec2 v_uv; uniform sampler2D u_tex; uniform float u_alpha;
+      void main(){ gl_FragColor=texture2D(u_tex,v_uv)*u_alpha; }`;
+      const mk=(t,src)=>{ const s=gl.createShader(t); gl.shaderSource(s,src); gl.compileShader(s); if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
+      prog=gl.createProgram(); gl.attachShader(prog,mk(gl.VERTEX_SHADER,vs)); gl.attachShader(prog,mk(gl.FRAGMENT_SHADER,fs)); gl.linkProgram(prog);
+      if(!gl.getProgramParameter(prog,gl.LINK_STATUS)) throw new Error('link');
+      gl.useProgram(prog);
+      ['u_canvas','u_size','u_anchor','u_scale','u_hair','u_rot','u_breath','u_shear','u_t','u_flip','u_tex','u_alpha'].forEach(n=>{ U[n]=gl.getUniformLocation(prog,n); });
+      const NX=12, NY=16, uv=[], idx=[];
+      for(let j=0;j<=NY;j++) for(let i=0;i<=NX;i++) uv.push(i/NX,j/NY);
+      for(let j=0;j<NY;j++) for(let i=0;i<NX;i++){ const a=j*(NX+1)+i, b=a+1, c=a+NX+1, d=c+1; idx.push(a,b,c,b,d,c); }
+      aUV=gl.getAttribLocation(prog,'a_uv');
+      const vb=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,vb); gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(uv),gl.STATIC_DRAW);
+      gl.enableVertexAttribArray(aUV); gl.vertexAttribPointer(aUV,2,gl.FLOAT,false,0,0);
+      const ib=gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,new Uint16Array(idx),gl.STATIC_DRAW); nIdx=idx.length;
+      gl.enable(gl.BLEND); gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
+    }catch(e){ console.warn('WebGL unavailable, using DOM fallback',e); gl=null; }
+  }
+  if(gl){
+    names.forEach(n=>{
+      const im=new Image();
+      im.onload=()=>{
+        if(!gl) return;
+        const t=gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D,t);
+        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,true);
+        gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,im);
+        gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+        tex[n]=t; if(++loaded===names.length) ready=true;
+      };
+      im.src=SPR[n].src;
+    });
+  } else {
+    cv.style.display='none';
+    names.forEach(n=>{ const im=document.createElement('img'); im.alt=''; im.src=SPR[n].src; im.style.cssText=`position:absolute;left:50%;bottom:${AB}px;height:${HT[n]}px;opacity:0;transform-origin:50% 100%;pointer-events:none;filter:drop-shadow(0 6px 10px rgba(0,0,0,.5));`; wrap.appendChild(im); domImgs[n]=im; });
+    ready=true;
+  }
+
+  /* ---------- physics ---------- */
+  const S={x:0,y:0,rot:0,sx:1,sy:1,vx:0,vy:0,vr:0,vsx:0,vsy:0,hx:0,hxv:0,hy:0,hyv:0};
+  const tgt={x:0,y:0,rot:0,sx:1,sy:1};
+  const spring=(k,vk,target,K,C,h)=>{ const a=K*(target-S[k])-C*S[vk]; S[vk]+=a*h; S[k]+=S[vk]*h; };
+  function physics(dt,sub){
+    const h=dt/sub;
+    for(let i=0;i<sub;i++){
+      spring('x','vx',tgt.x,110,17,h); spring('y','vy',tgt.y,260,17,h); spring('rot','vr',tgt.rot,170,14,h);
+      spring('sx','vsx',tgt.sx,320,19,h); spring('sy','vsy',tgt.sy,320,19,h);
+      if(S.y>0){ if(S.vy>60){ S.vsy-=Math.min(5,S.vy*0.011); S.vsx+=Math.min(4,S.vy*0.008); } S.y=0; S.vy=0; }   // ground: landing squash
+      spring('hx','hxv',clamp(-S.vx*0.05,-16,16),95,6.5,h);     // hair/skirt follow-through (inertia)
+      spring('hy','hyv',clamp(-S.vy*0.025,-12,12),95,6.5,h);
+    }
+  }
+
+  /* ---------- pose cross-dissolve ---------- */
+  let cur={p:names[0],f:0}, prev=null, fade=1; const BLEND=0.11;
+  function setVariant(p,f){ f=f?1:0; if(cur.p===p&&cur.f===f) return; prev=cur; cur={p:p,f:f}; fade=0; }
+
+  /* ---------- choreography ---------- */
+  let endFired=false, keys=[], ki=0, loop=true, queue=[], key=null, keyStart=0, nextAt=0, running=false, T=0; const GAIT=230;
+  function applyKey(k,idx){
+    const base=(nextAt>0&&T-nextAt<400)?nextAt:T;      // stay on the musical grid; resync if we fell far behind
+    key=k; keyStart=base; nextAt=base+k.d; setVariant(k.p,k.f);
+    tgt.x=(k.x||0)*rx(); tgt.y=k.y||0; tgt.rot=k.r||0; tgt.sx=k.sx||1; tgt.sy=k.sy||1;
+    if(k.say&&o.onSay) o.onSay(k.say,tgt.x); if(o.onKey) o.onKey(idx,k);
+  }
+  function stepSeq(){
+    if(!running) return;
+    let guard=0;
+    while(T>=nextAt && guard++<4){                     // catch up if a frame was slow (keeps music/timers in sync)
+      let k=null, idx=-1;
+      if(queue.length) k=queue.shift(); else if(ki<keys.length){ idx=ki; k=keys[ki++]; } else if(loop&&keys.length){ ki=0; idx=0; k=keys[ki++]; }
+      if(!k){ if(!loop&&!endFired&&ki>=keys.length&&!queue.length){ endFired=true; if(o.onEnd) o.onEnd(); } break; }
+      applyKey(k,idx);
+    }
+    if(key){
+      if(key.xTo!=null){ const u=clamp((T-keyStart)/key.d,0,1); tgt.x=((key.x||0)+(key.xTo-(key.x||0))*u)*rx(); }
+      if(key.gait){ const ph=(T-keyStart)/GAIT, s=Math.abs(Math.sin(Math.PI*ph));
+        tgt.y=(key.y||0)-9*s; tgt.sy=(key.sy||1)*(1-0.035*(1-s)); tgt.sx=(key.sx||1)*(1+0.02*(1-s)); tgt.rot=(key.r||0)+1.6*Math.sin(Math.PI*ph); }
+    }
+  }
+
+  /* ---------- drawing ---------- */
+  function frameParams(){
+    let drop=0, ang=0; if(R){ const xc=clamp(S.x,-R+1,R-1); drop=R-Math.sqrt(R*R-xc*xc); ang=Math.asin(xc/R); }
+    const dyn=1+clamp(-S.vy*0.00028,-0.07,0.1);
+    return {drop,ang,sy:S.sy*dyn,sx:S.sx/Math.sqrt(dyn),breath:Math.sin(T/1000*1.9),idle:0.012*Math.sin(T/1000*0.9)};
+  }
+  function drawVar(v,alpha,P){
+    const n=v.p, t=tex[n]; if(!t) return; const h=HT[n], w=h*SPR[n].w/SPR[n].h;
+    gl.bindTexture(gl.TEXTURE_2D,t);
+    gl.uniform2f(U.u_canvas,W,Hc); gl.uniform2f(U.u_size,w,h);
+    gl.uniform2f(U.u_anchor,W/2+S.x,Hc-AB+S.y+P.drop+(BASE[n]||0)); gl.uniform2f(U.u_scale,P.sx,P.sy);
+    gl.uniform1f(U.u_rot,S.rot*Math.PI/180+P.ang+P.idle); gl.uniform2f(U.u_hair,S.hx*h/204,S.hy*h/204);
+    gl.uniform1f(U.u_breath,P.breath); gl.uniform1f(U.u_shear,clamp(-S.vx*0.00012,-0.06,0.06));
+    gl.uniform1f(U.u_t,T/1000); gl.uniform1f(U.u_flip,v.f); gl.uniform1f(U.u_alpha,alpha); gl.uniform1i(U.u_tex,0);
+    gl.drawElements(gl.TRIANGLES,nIdx,gl.UNSIGNED_SHORT,0);
+  }
+  function draw(){
+    const P=frameParams(), a=fade*fade*(3-2*fade);
+    if(gl){
+      gl.clearColor(0,0,0,0); gl.clear(gl.COLOR_BUFFER_BIT);
+      if(prev&&fade<1) drawVar(prev,1-a,P);
+      drawVar(cur,(prev&&fade<1)?a:1,P);
+    } else {
+      names.forEach(n=>{ domImgs[n].style.opacity=0; });
+      const put=(v,al)=>{ const im=domImgs[v.p]; im.style.opacity=al;
+        im.style.transform=`translate(calc(-50% + ${S.x}px), ${S.y+P.drop+(BASE[v.p]||0)}px) rotate(${S.rot+P.ang*180/Math.PI}deg) scale(${v.f?-P.sx:P.sx}, ${P.sy})`; };
+      if(prev&&fade<1) put(prev,1-a); put(cur,(prev&&fade<1)?a:1);
+    }
+  }
+
+  let raf=0, last=0, dead=false;
+  function frame(ts){
+    if(dead) return; raf=requestAnimationFrame(frame);
+    if(document.hidden||!ready){ last=ts; return; }
+    const dt=Math.min(0.25,Math.max(0.001,(ts-last)/1000||0.016)); last=ts; T+=dt*1000;   // follow real time, even on slow devices
+    stepSeq(); let rem=dt; while(rem>1e-6){ const h=Math.min(rem,1/120); physics(h,1); rem-=h; }
+    if(prev){ fade=Math.min(1,fade+dt/BLEND); if(fade>=1) prev=null; }
+    draw();
+  }
+  raf=requestAnimationFrame(frame);
+
+  return {
+    mode: gl?'webgl':'dom',
+    run(k,opt){ endFired=false; keys=k; ki=0; loop=!(opt&&opt.loop===false); queue=[]; running=true; nextAt=0; },
+    interrupt(k,opt){ queue=k.slice(); nextAt=0; if(opt&&opt.restart) ki=0; running=true; },
+    xFrac(){ return tgt.x/(rx()||1); },
+    destroy(){ dead=true; cancelAnimationFrame(raf); window.removeEventListener('resize',resize);
+      try{ if(gl){ const e=gl.getExtension('WEBGL_lose_context'); if(e) e.loseContext(); } }catch(err){}
+      cv.remove(); Object.values(domImgs).forEach(im=>im.remove()); }
+  };
+}
+</script>
+<script>
+/* createMascot({el, sprites, charH, ground, stroll, tap}) -> {react(kind,text), say(text), destroy()}
+   kinds: hello cheer dance wow shrug sad roll look */
+function createMascot(o){
+  const host=o.el, k=o.charH/204, s=v=>v*k, rnd=(a,b)=>a+Math.random()*(b-a);
+  const H0={wave:200,cheer:198,run:202,front:204,side:204,back:204,big:206}, H={};
+  Object.keys(H0).forEach(n=>{ H[n]=H0[n]*k; });
+  host.innerHTML='<div class="m-dancer"></div><div class="m-bubble"></div>';
+  const bubble=host.querySelector('.m-bubble'); let bt=null;
+  function say(t,ms){ bubble.textContent=t; bubble.classList.add('show'); clearTimeout(bt); bt=setTimeout(()=>bubble.classList.remove('show'),ms||2600); }
+  const K=(p,d,x)=>Object.assign({p:p,d:d,f:0,x:0,y:0,r:0,sx:1,sy:1,xTo:null,gait:false,say:null},x||{});
+  const M={
+    breathe:()=>[K('front',rnd(1800,3400))],
+    wave:()=>[K('wave',280,{r:-3}),K('wave',260,{f:1,y:s(-6),r:3}),K('wave',260,{r:-3}),K('wave',260,{f:1,y:s(-6),r:3}),K('front',300)],
+    look:()=>[K('side',800,{r:-2}),K('front',300),K('side',800,{f:1,r:2}),K('front',400)],
+    hop:()=>[K('front',150,{sy:.92,sx:1.05}),K('cheer',380,{y:s(-24),sy:1.04}),K('front',220,{sy:.94,sx:1.03})],
+    shuffle:()=>[K('big',320,{r:-5,x:s(-6)}),K('big',320,{r:5,x:s(6)}),K('big',320,{r:-5,x:s(-6)}),K('front',320)],
+    turn:()=>[K('front',250),K('side',250),K('back',500),K('side',250,{f:1}),K('front',300)],
+    sway:()=>[K('front',500,{r:-3,x:s(-4)}),K('front',500,{r:3,x:s(4)}),K('front',400)],
+    stroll:()=>{ const d=Math.random()<.5?-1:1, X=d*s(80);
+      return [K('front',140,{sy:.92,sx:1.05}),K('run',800,{x:0,xTo:X,f:d<0?1:0,gait:true}),K('front',260,{x:X,sy:.94,sx:1.03}),
+              K('run',800,{x:X,xTo:0,f:d<0?0:1,gait:true}),K('front',300,{sy:.95,sx:1.03})]; }
+  };
+  const R={
+    hello:()=>[K('wave',280,{r:-3}),K('wave',240,{f:1,y:s(-8),r:3}),K('wave',240,{r:-3,y:s(-3)}),K('wave',240,{f:1,y:s(-8),r:3}),K('front',300,{sy:.97})],
+    cheer:()=>[K('front',170,{sy:.9,sx:1.06}),K('cheer',400,{y:s(-30),sy:1.04}),K('cheer',180,{y:s(-3),r:-4}),K('front',180,{sy:.9,sx:1.06}),K('cheer',400,{f:1,y:s(-26),sy:1.04}),K('front',260,{sy:.95,sx:1.03})],
+    dance:()=>{ const B=300; return [K('cheer',B,{r:-8,x:s(-8),y:s(-6)}),K('cheer',B,{f:1,r:8,x:s(8),y:s(-16)}),K('cheer',B,{r:-8,x:s(-8),y:s(-6)}),K('cheer',B,{f:1,r:8,x:s(8),y:s(-16)}),
+      K('front',B,{x:s(-12),r:-6,y:s(-5)}),K('wave',B,{x:s(-5),y:s(-12)}),K('front',B,{x:s(12),r:6,y:s(-5)}),K('wave',B,{f:1,x:s(5),y:s(-12)}),
+      K('big',B,{y:s(-14),sy:1.03}),K('big',B,{f:1,sy:.94,sx:1.05}),K('big',B,{y:s(-14),sy:1.03}),K('front',B,{sy:.92,sx:1.05})]; },
+    wow:()=>[K('front',120,{sy:.92,sx:1.05}),K('wave',650,{y:s(-14),r:3,sy:1.03}),K('front',300,{sy:.96})],
+    shrug:()=>[K('front',220,{r:-4,sy:.97}),K('front',520,{r:4,sy:.97}),K('front',300)],
+    sad:()=>[K('front',260,{sy:.95,r:-3}),K('side',900,{r:-2,sy:.97}),K('front',700,{r:2,sy:.96})],
+    roll:()=>[K('front',110,{sy:.93,sx:1.04}),K('wave',240,{y:s(-8),r:-3}),K('front',180)],
+    look:()=>[K('side',800,{r:-2}),K('front',300),K('side',800,{f:1,r:2}),K('front',300)]
+  };
+  function idleSeq(){
+    const names=['wave','look','hop','shuffle','turn','sway']; if(o.stroll) names.push('stroll','stroll');
+    const out=[]; for(let i=0;i<16;i++){ out.push(...M.breathe()); out.push(...M[names[Math.floor(Math.random()*names.length)]]()); } return out;
+  }
+  const D=createDancer({el:host.querySelector('.m-dancer'),sprites:o.sprites,heights:H,base:{run:10*k},rx:()=>1,surfaceR:0,anchorBottom:o.ground||0});
+  D.run(idleSeq(),{loop:true});
+  function react(kind,text,ms){ const f=R[kind]; if(f) D.interrupt(f()); if(text) say(text,ms); }
+  if(o.tap) host.addEventListener('pointerdown',()=>react('cheer','Hehe! 😄'));
+  return { react, say, mode:D.mode, destroy(){ clearTimeout(bt); D.destroy(); host.innerHTML=''; } };
+}
+</script>
+<script>
+const SPRM={"wave": {"src": "assets/sprites/48853530dd87.webp", "w": 149, "h": 260}, "cheer": {"src": "assets/sprites/5b00c2994ea7.webp", "w": 211, "h": 260}, "run": {"src": "assets/sprites/d7cf73604a5b.webp", "w": 219, "h": 260}, "front": {"src": "assets/sprites/c77e024184c0.webp", "w": 156, "h": 260}, "side": {"src": "assets/sprites/606249e5e750.webp", "w": 120, "h": 260}, "back": {"src": "assets/sprites/2090baca0220.webp", "w": 160, "h": 260}, "big": {"src": "assets/sprites/f8030d8c62a6.webp", "w": 131, "h": 260}};
+</script>
+
+<script>
+/* Galaxy background music (generative, Web Audio). API: LPMusic.setup({vol,button,icon,toggle,persist}), setEnabled(bool), duck(0..1), justStarted() */
+const LPMusic=(function(){
+  const BPM=92, EIGHTH=60/BPM/2, mf=m=>440*Math.pow(2,(m-69)/12);
+  const PROG=[{b:45,p:[57,60,64,67]},{b:41,p:[53,57,60,64]},{b:48,p:[55,60,64,67]},{b:43,p:[55,59,62,64]},
+              {b:45,p:[57,60,64,67]},{b:41,p:[53,57,60,64]},{b:50,p:[53,57,62,65]},{b:40,p:[56,59,62,64]}];
+  let ctx=null, master=null, noiseBuf=null, nextT=0, step=0, on=true, started=false, just=false, vol=0.35, duckLvl=1, btn=null, ownIcon=false, persist=false;
+  const level=()=>on?Math.max(0.0001,vol*duckLvl):0.0001;
+  const applyGain=tc=>{ if(master&&ctx) master.gain.setTargetAtTime(level(),ctx.currentTime,tc||0.2); };
+  function icon(){ if(btn&&ownIcon) btn.textContent=!started?'🎵':(on?'🔊':'🔇'); }
+  function tone(t,midi,dur,type,v){
+    const o=ctx.createOscillator(), g=ctx.createGain(); o.type=type; o.frequency.value=mf(midi);
+    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(v,t+0.012); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t+dur+0.05);
+  }
+  function play(s,t){
+    const bar=Math.floor(s/8)%PROG.length, pos=s%8, ch=PROG[bar], barDur=EIGHTH*8;
+    if(pos===0){
+      ch.p.forEach(m=>[-7,7].forEach(det=>{
+        const o=ctx.createOscillator(), f=ctx.createBiquadFilter(), g=ctx.createGain();
+        o.type='sawtooth'; o.frequency.value=mf(m); o.detune.value=det;
+        f.type='lowpass'; f.frequency.setValueAtTime(500,t); f.frequency.linearRampToValueAtTime(1500,t+barDur/2); f.frequency.linearRampToValueAtTime(600,t+barDur);
+        g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(0.04,t+0.9); g.gain.setValueAtTime(0.04,t+barDur-0.8); g.gain.linearRampToValueAtTime(0.0001,t+barDur+0.4);
+        o.connect(f); f.connect(g); g.connect(master); o.start(t); o.stop(t+barDur+0.5);
+      }));
+    }
+    if(pos===0||pos===4) tone(t,ch.b,EIGHTH*1.8,'sine',0.26);
+    if(pos===6) tone(t,ch.b+12,EIGHTH*0.9,'sine',0.09);
+    const pat=[0,1,2,3,2,1,3,2], pool=ch.p.map(m=>m+12);
+    tone(t,pool[pat[pos]]+((bar%2===1&&pos===7)?12:0),EIGHTH*1.5,'triangle',0.075);
+    if(pos===0||pos===4){
+      const o=ctx.createOscillator(), g=ctx.createGain(); o.type='sine'; o.frequency.setValueAtTime(120,t); o.frequency.exponentialRampToValueAtTime(42,t+0.16);
+      g.gain.setValueAtTime(0.32,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.2); o.connect(g); g.connect(master); o.start(t); o.stop(t+0.22);
+    }
+    if(pos%2===1){
+      const n=ctx.createBufferSource(); n.buffer=noiseBuf; const hp=ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=7500;
+      const g=ctx.createGain(); g.gain.setValueAtTime(0.05,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.05); n.connect(hp); hp.connect(g); g.connect(master); n.start(t);
+    }
+  }
+  function schedule(){
+    if(!ctx||ctx.state!=='running'){ if(ctx) nextT=Math.max(nextT,ctx.currentTime+0.1); return; }
+    while(nextT<ctx.currentTime+0.4){ play(step,nextT); nextT+=EIGHTH; step++; }
+  }
+  function init(){
+    const C=window.AudioContext||window.webkitAudioContext; if(!C) return false;
+    ctx=new C(); master=ctx.createGain(); master.gain.value=0.0001;
+    const comp=ctx.createDynamicsCompressor(); master.connect(comp); comp.connect(ctx.destination);
+    const dly=ctx.createDelay(1); dly.delayTime.value=EIGHTH*3;
+    const fb=ctx.createGain(); fb.gain.value=0.4; const wet=ctx.createGain(); wet.gain.value=0.38;
+    const lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=2200;
+    master.connect(dly); dly.connect(lp); lp.connect(fb); fb.connect(dly); lp.connect(wet); wet.connect(comp);
+    const len=Math.floor(ctx.sampleRate*0.06); noiseBuf=ctx.createBuffer(1,len,ctx.sampleRate);
+    const d=noiseBuf.getChannelData(0); for(let i=0;i<len;i++) d[i]=Math.random()*2-1;
+    applyGain(1.2); nextT=ctx.currentTime+0.15; step=0; setInterval(schedule,100); return true;
+  }
+  function start(){
+    if(started) return; if(!init()) return;
+    started=true; just=true; setTimeout(()=>{ just=false; },60); ctx.resume(); icon();
+    if(btn) btn.classList.remove('musichint');
+  }
+  function setEnabled(v){
+    on=!!v; applyGain(0.15); icon();
+    if(persist){ try{ localStorage.setItem('ludopix_music_off', on?'0':'1'); }catch(e){} }
+  }
+  document.addEventListener('visibilitychange',()=>{ if(!ctx) return; if(document.hidden) ctx.suspend(); else ctx.resume(); });
+  return {
+    setup(o){
+      o=o||{}; vol=o.vol||vol; btn=o.button||null; ownIcon=!!o.icon; persist=!!o.persist;
+      if(persist){ try{ if(localStorage.getItem('ludopix_music_off')==='1') on=false; }catch(e){} }
+      ['pointerdown','keydown','touchstart'].forEach(ev=>window.addEventListener(ev,start,{passive:true}));
+      if(btn){
+        const st=document.createElement('style');
+        st.textContent='@keyframes musicHint{0%,100%{box-shadow:0 0 0 0 rgba(45,226,255,.6);}50%{box-shadow:0 0 0 8px rgba(45,226,255,0);}} #muteBtn.musichint{animation:musicHint 1.6s ease-in-out infinite;}';
+        document.head.appendChild(st); btn.classList.add('musichint');
+        if(o.toggle) btn.addEventListener('click',()=>{ if(just||!started) return; setEnabled(!on); });
+      }
+      icon();
+    },
+    setEnabled, duck(f){ duckLvl=f; applyGain(0.35); }, isOn(){ return on; }, justStarted(){ return just; }
+  };
+})();
+</script>
+<script>LPMusic.setup({vol:0.32,button:document.getElementById('muteBtn'),icon:true,toggle:true,persist:true});</script>
+
+<script type="module" src="js/desafio.js"></script>
+</body>
+</html>

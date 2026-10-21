@@ -221,8 +221,17 @@ export class PgLiteClient {
     this.socket.write(job.payload);
   }
 
-  /** Executa uma consulta com parâmetros ($1, $2...). Nunca concatena SQL. */
+  /**
+   * Executa uma consulta com parâmetros ($1, $2...). Nunca concatena SQL.
+   *
+   * Sem parâmetros, usa o protocolo de consulta SIMPLES, que aceita vários
+   * comandos separados por ponto e vírgula — é o que as migrações precisam.
+   * Com parâmetros, usa o protocolo ESTENDIDO, que só aceita um comando por
+   * vez mas é o que mantém os valores fora do texto do SQL. O driver `pg`
+   * real faz exatamente a mesma distinção.
+   */
   query(text, params = []) {
+    if (!params || params.length === 0) return this.#simpleQuery(text);
     return new Promise((resolve, reject) => {
       const encoded = params.map(encodeParam);
 
@@ -249,6 +258,17 @@ export class PgLiteClient {
 
       this.pending.push({
         payload: Buffer.concat([parse, bind, describe, execute, sync]),
+        resolve, reject, rows: [], fields: [], error: null,
+      });
+      this.#next();
+    });
+  }
+
+  /** Protocolo simples: um único 'Q', aceita múltiplos comandos. */
+  #simpleQuery(text) {
+    return new Promise((resolve, reject) => {
+      this.pending.push({
+        payload: message('Q', cstring(text)),
         resolve, reject, rows: [], fields: [], error: null,
       });
       this.#next();

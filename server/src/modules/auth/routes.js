@@ -61,7 +61,7 @@ export function registerAuthRoutes(router) {
       await client.query(`INSERT INTO responsible_gaming (user_id) VALUES ($1)`, [user.id]);
       await client.query(
         `INSERT INTO audit_log (actor_id, action, target_type, target_id, ip)
-         VALUES ($1, 'user.signup', 'user', $1, $2)`,
+         VALUES ($1::uuid, 'user.signup', 'user', $1::text, $2)`,
         [user.id, ctx.ip],
       );
 
@@ -201,7 +201,7 @@ export function registerAuthRoutes(router) {
       await revokeAllSessions(client, user.user_id, { except: ctx.session.id });
       await client.query(
         `INSERT INTO audit_log (actor_id, action, target_type, target_id, ip)
-         VALUES ($1, 'user.password_changed', 'user', $1, $2)`,
+         VALUES ($1::uuid, 'user.password_changed', 'user', $1::text, $2)`,
         [user.user_id, ctx.ip],
       );
     });
