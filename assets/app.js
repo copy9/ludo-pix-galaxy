@@ -79,7 +79,9 @@
   // Em app nativo o conteudo ja vem empacotado; service worker so atrapalharia.
   if ('serviceWorker' in navigator && !ehNativo && location.protocol !== 'file:') {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js').then((reg) => {
+      // Relativo de proposito: funciona na raiz do dominio e tambem quando o
+      // site esta num subcaminho (GitHub Pages serve em /usuario-repo/).
+      navigator.serviceWorker.register('sw.js').then((reg) => {
         reg.addEventListener('updatefound', () => {
           const novo = reg.installing;
           if (!novo) return;

@@ -18,23 +18,32 @@
 const VERSAO = 'lpg-v1';
 const CACHE_CASCA = `casca-${VERSAO}`;
 
+/* Base = pasta onde este service worker foi servido.
+   O site pode estar na raiz de um dominio (https://site.com/) ou num
+   subcaminho (GitHub Pages serve em /usuario-repo/). Caminhos absolutos
+   comecando com "/" quebrariam no segundo caso, entao tudo aqui e resolvido
+   a partir daqui. */
+const BASE = new URL('./', self.location).pathname;
+const url = (p) => BASE + p;
+
 /* A casca do app: o que e preciso para a interface abrir.
    Paginas que dependem de dinheiro (desafio, perfil) NAO entram aqui: elas sao
    buscadas da rede, porque abrir uma versao velha delas confunde mais do que
    ajuda. */
 const CASCA = [
-  '/',
-  '/index.html',
-  '/jogo.html',
-  '/offline.html',
-  '/manifest.webmanifest',
-  '/assets/api.js',
-  '/assets/mascot.js',
-  '/assets/music.js',
-  '/assets/sprites.js',
-  '/assets/icons/icon-192.png',
-  '/assets/icons/icon-512.png',
-];
+  '',                      // a propria pasta (index implicito)
+  'index.html',
+  'jogo.html',
+  'offline.html',
+  'manifest.webmanifest',
+  'assets/api.js',
+  'assets/app.js',
+  'assets/mascot.js',
+  'assets/music.js',
+  'assets/sprites.js',
+  'assets/icons/icon-192.png',
+  'assets/icons/icon-512.png',
+].map(url);
 
 self.addEventListener('install', (e) => {
   e.waitUntil((async () => {
@@ -54,7 +63,9 @@ self.addEventListener('activate', (e) => {
   })());
 });
 
-const ehApi = (url) => url.pathname.startsWith('/api/');
+/* Qualquer caminho terminado em /api/... e da API, esteja o site na raiz ou
+   num subcaminho. Ver a regra no topo: isto nunca entra em cache. */
+const ehApi = (u) => u.pathname.startsWith(url('api/')) || u.pathname.startsWith('/api/');
 
 self.addEventListener('fetch', (e) => {
   const req = e.request;
@@ -81,7 +92,7 @@ self.addEventListener('fetch', (e) => {
         return resp;
       } catch {
         return (await caches.match(req))
-            || (await caches.match('/offline.html'))
+            || (await caches.match(url('offline.html')))
             || new Response('Sem conexão', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
       }
     })());
