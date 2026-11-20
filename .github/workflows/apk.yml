@@ -34,7 +34,7 @@ on:
     tags: ['v*']
 
 permissions:
-  contents: read
+  contents: write        # necessario para publicar o APK como Release
 
 jobs:
   build:
@@ -173,6 +173,45 @@ jobs:
           path: ${{ steps.apk.outputs.caminho }}
           retention-days: 30
 
+      # Publica tambem como Release.
+      # Artifact do Actions so pode ser baixado por quem tem login no GitHub, o
+      # que nao serve para entregar o app a jogador nenhum. Asset de Release tem
+      # link publico e direto — e esse link e o proprio canal de distribuicao.
+      - name: Publicar o APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ASSINADO='${{ steps.sign.outputs.assinado }}'
+          if [ "$ASSINADO" = "true" ]; then
+            TAG="app-v${{ github.run_number }}"
+            TITULO="Ludo Pix Galaxy — APK (assinado)"
+            NOTA="APK assinado, pronto para distribuir."
+            PRE=""
+          else
+            TAG="app-debug"
+            TITULO="Ludo Pix Galaxy — APK de teste"
+            NOTA="APK de **debug**: instala e roda para testar, mas NAO serve para distribuir (falta a chave de assinatura — ver README-APP.md)."
+            PRE="--prerelease"
+          fi
+
+          cp "${{ steps.apk.outputs.caminho }}" "ludo-pix-galaxy.apk"
+
+          CORPO="$NOTA
+
+          - **API:** ${{ steps.api.outputs.url }}
+          - **versionCode:** ${{ github.run_number }}
+          - **commit:** ${{ github.sha }}
+
+          Para instalar: baixe no celular e permita \"instalar de fontes desconhecidas\"."
+
+          # A tag de debug e reaproveitada a cada build, entao a release antiga sai
+          # primeiro — senao o upload falha por asset com nome repetido.
+          gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
+          gh release create "$TAG" "ludo-pix-galaxy.apk" \
+            --title "$TITULO" --notes "$CORPO" $PRE
+
+          echo "LINK=$(gh release view "$TAG" --json assets --jq '.assets[0].url')" >> "$GITHUB_ENV"
+
       - name: Resumo
         run: |
           {
@@ -182,5 +221,5 @@ jobs:
             echo "- **API:** ${{ steps.api.outputs.url }}"
             echo "- **versionCode:** ${{ github.run_number }}"
             echo ""
-            echo "Baixe em **Artifacts**, no fim desta pagina."
+            echo "Baixe em [Releases](${{ github.server_url }}/${{ github.repository }}/releases) — link publico, sem precisar de login."
           } >> "$GITHUB_STEP_SUMMARY"
