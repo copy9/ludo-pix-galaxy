@@ -53,7 +53,19 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - uses: android-actions/setup-android@v3
+      # O runner ubuntu-latest ja traz o SDK do Android instalado, entao nao ha
+      # nada a baixar. A acao android-actions/setup-android tentava instalar o
+      # pacote 'tools', que foi removido das cmdline-tools modernas, e falhava.
+      - name: Localizar o SDK do Android
+        run: |
+          SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          if [ ! -d "$SDK/platform-tools" ] && [ ! -d "$SDK/platforms" ]; then
+            echo "::error::SDK do Android nao encontrado em $SDK"; exit 1
+          fi
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
+          echo "SDK: $SDK"
+          ls "$SDK"
 
       - name: Definir a URL da API
         id: api
