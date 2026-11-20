@@ -1,0 +1,174 @@
+# Compila o APK do Android.
+#
+# Roda aqui porque os runners do GitHub ja trazem o SDK do Android instalado —
+# assim ninguem precisa instalar Android Studio para gerar o aplicativo.
+#
+# O que configurar antes do primeiro uso (Settings -> Secrets and variables -> Actions):
+#
+#   Variable  LUDOPIX_API         https://api.seudominio.com   (obrigatoria)
+#
+#   Para gerar APK ASSINADO, pronto para distribuir, adicione os 4 secrets:
+#   Secret    ANDROID_KEYSTORE_B64   keystore .jks em base64
+#   Secret    ANDROID_KEYSTORE_PASS  senha do keystore
+#   Secret    ANDROID_KEY_ALIAS      alias da chave
+#   Secret    ANDROID_KEY_PASS       senha da chave
+#
+#   Como criar o keystore (uma vez, na sua maquina) e no README-APP.md.
+#   GUARDE O ARQUIVO: perdeu o keystore, perdeu a capacidade de publicar
+#   atualizacoes para quem ja instalou — o Android recusa um APK assinado por
+#   outra chave, e a unica saida vira desinstalar e instalar de novo.
+#
+# Sem os secrets o workflow ainda roda e entrega um APK de DEBUG: instala e
+# funciona para testar, mas nao serve para distribuir.
+
+name: APK Android
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_url:
+        description: 'URL da API (deixe vazio para usar a variable LUDOPIX_API)'
+        required: false
+        type: string
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Definir a URL da API
+        id: api
+        run: |
+          URL="${{ inputs.api_url || vars.LUDOPIX_API }}"
+          if [ -z "$URL" ]; then
+            echo "::error::Falta a URL da API. Defina a variable LUDOPIX_API em Settings -> Secrets and variables -> Actions -> Variables, ou informe ao disparar o workflow."
+            exit 1
+          fi
+          case "$URL" in
+            https://*) ;;
+            *) echo "::error::A URL da API precisa comecar com https:// (recebido: $URL)"; exit 1 ;;
+          esac
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "API: $URL"
+
+      - name: Instalar dependências
+        working-directory: app
+        run: npm install --no-audit --no-fund
+
+      - name: Empacotar a interface
+        working-directory: app
+        env:
+          LUDOPIX_API: ${{ steps.api.outputs.url }}
+        run: npm run build
+
+      - name: Criar o projeto Android
+        working-directory: app
+        run: npx cap add android
+
+      - name: Gerar ícones e splash
+        working-directory: app
+        run: npx @capacitor/assets generate --android --assetPath resources || echo "::warning::Geracao de icones falhou; o APK sai com o icone padrao do Capacitor"
+
+      - name: Versão do app
+        working-directory: app
+        run: |
+          # versionCode PRECISA subir a cada release, senao o Android recusa a
+          # atualizacao sobre uma instalacao existente. run_number sobe sozinho.
+          CODE="${{ github.run_number }}"
+          NAME="${GITHUB_REF_NAME#v}"
+          case "$NAME" in ''|*[!0-9.]*) NAME="1.0.$CODE" ;; esac
+          sed -i "s/versionCode .*/versionCode $CODE/; s/versionName .*/versionName \"$NAME\"/" \
+            android/app/build.gradle
+          echo "versionCode=$CODE versionName=$NAME"
+
+      - name: Sincronizar
+        working-directory: app
+        run: npx cap sync android
+
+      - name: Preparar assinatura
+        id: sign
+        working-directory: app
+        env:
+          KS: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KS" ]; then
+            echo "$KS" | base64 -d > android/app/release.jks
+            # Confere que o arquivo decodificou mesmo: base64 invalido geraria um
+            # .jks vazio e o erro so apareceria la na frente, no gradle.
+            if [ ! -s android/app/release.jks ]; then
+              echo "::error::ANDROID_KEYSTORE_B64 nao decodificou para um arquivo valido"
+              exit 1
+            fi
+            echo "assinado=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Sem keystore nos secrets — saindo APK de debug, que NAO serve para distribuir."
+            echo "assinado=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Compilar APK assinado
+        if: steps.sign.outputs.assinado == 'true'
+        working-directory: app/android
+        env:
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASS }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASS }}
+        run: |
+          ./gradlew assembleRelease --no-daemon \
+            -Pandroid.injected.signing.store.file="$PWD/app/release.jks" \
+            -Pandroid.injected.signing.store.password="$KS_PASS" \
+            -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$KEY_PASS"
+
+      - name: Compilar APK de debug
+        if: steps.sign.outputs.assinado != 'true'
+        working-directory: app/android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Apagar o keystore do runner
+        if: always()
+        run: rm -f app/android/app/release.jks
+
+      - name: Localizar o APK
+        id: apk
+        run: |
+          APK=$(find app/android -name "*.apk" -type f | head -1)
+          if [ -z "$APK" ]; then echo "::error::Nenhum APK gerado"; exit 1; fi
+          echo "caminho=$APK" >> "$GITHUB_OUTPUT"
+          echo "APK: $APK ($(du -h "$APK" | cut -f1))"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ludo-pix-galaxy-apk
+          path: ${{ steps.apk.outputs.caminho }}
+          retention-days: 30
+
+      - name: Resumo
+        run: |
+          {
+            echo "## APK gerado"
+            echo ""
+            echo "- **Assinado:** ${{ steps.sign.outputs.assinado == 'true' && 'sim, pronto para distribuir' || 'nao (debug) — so para testar' }}"
+            echo "- **API:** ${{ steps.api.outputs.url }}"
+            echo "- **versionCode:** ${{ github.run_number }}"
+            echo ""
+            echo "Baixe em **Artifacts**, no fim desta pagina."
+          } >> "$GITHUB_STEP_SUMMARY"

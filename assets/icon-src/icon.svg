@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Icone do app: dado em orbita.
+       Desenhado para ler a 48px: uma forma central forte, contraste alto e
+       nenhum detalhe fino que desapareca na miniatura. Paleta vinda do site
+       (void / violeta / magenta / ciano / ouro). -->
+  <defs>
+    <radialGradient id="ceu" cx="38%" cy="30%" r="85%">
+      <stop offset="0%"  stop-color="#2a1d6b"/>
+      <stop offset="55%" stop-color="#120a38"/>
+      <stop offset="100%" stop-color="#05030f"/>
+    </radialGradient>
+    <linearGradient id="faceTopo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#b9a6ff"/>
+      <stop offset="100%" stop-color="#7b5cff"/>
+    </linearGradient>
+    <linearGradient id="faceEsq" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#6f4ae8"/>
+      <stop offset="100%" stop-color="#3b2391"/>
+    </linearGradient>
+    <linearGradient id="faceDir" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ff3dcb"/>
+      <stop offset="100%" stop-color="#a0208a"/>
+    </linearGradient>
+    <linearGradient id="anel" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#2de2ff" stop-opacity="0"/>
+      <stop offset="35%"  stop-color="#2de2ff" stop-opacity=".95"/>
+      <stop offset="65%"  stop-color="#ffe27a" stop-opacity=".95"/>
+      <stop offset="100%" stop-color="#ff3dcb" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="brilho" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="10" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" fill="url(#ceu)"/>
+
+  <!-- estrelas: poucas e grandes, para nao virar ruido quando reduzido -->
+  <g fill="#eaf0ff">
+    <circle cx="78"  cy="96"  r="4.5" opacity=".95"/>
+    <circle cx="430" cy="78"  r="3.5" opacity=".8"/>
+    <circle cx="462" cy="188" r="5"   opacity=".9"/>
+    <circle cx="58"  cy="236" r="3"   opacity=".65"/>
+    <circle cx="398" cy="432" r="4"   opacity=".8"/>
+    <circle cx="104" cy="424" r="3.2" opacity=".7"/>
+    <circle cx="256" cy="54"  r="3"   opacity=".6"/>
+  </g>
+
+  <!-- orbita atras do dado -->
+  <ellipse cx="256" cy="286" rx="186" ry="62" fill="none"
+           stroke="url(#anel)" stroke-width="13" stroke-linecap="round"
+           transform="rotate(-20 256 286)" filter="url(#brilho)"/>
+
+  <!-- dado isometrico, centralizado na zona segura do icone mascarado -->
+  <g transform="translate(256 250)">
+    <!-- topo -->
+    <path d="M0 -112 L104 -52 L0 8 L-104 -52 Z" fill="url(#faceTopo)"/>
+    <!-- esquerda -->
+    <path d="M-104 -52 L0 8 L0 128 L-104 68 Z" fill="url(#faceEsq)"/>
+    <!-- direita -->
+    <path d="M104 -52 L104 68 L0 128 L0 8 Z" fill="url(#faceDir)"/>
+    <!-- arestas -->
+    <path d="M0 -112 L104 -52 L104 68 L0 128 L-104 68 L-104 -52 Z M0 8 L0 128 M-104 -52 L0 8 L104 -52"
+          fill="none" stroke="#eaf0ff" stroke-opacity=".55" stroke-width="5" stroke-linejoin="round"/>
+
+    <!-- Pips do topo: TRES, nao cinco.
+         Com cinco eles encostavam uns nos outros e, reduzidos a 48px, viravam
+         um borrao escuro no lugar de pontos. Tres bem espacados continuam
+         lendo como face de dado na miniatura. -->
+    <g fill="#120a38">
+      <ellipse cx="-62" cy="-52" rx="15" ry="9"/>
+      <ellipse cx="0"   cy="-52" rx="15" ry="9"/>
+      <ellipse cx="62"  cy="-52" rx="15" ry="9"/>
+    </g>
+    <!-- pips da face esquerda (2) -->
+    <g fill="#eaf0ff" opacity=".92">
+      <ellipse cx="-70" cy="20" rx="11" ry="13"/>
+      <ellipse cx="-34" cy="76" rx="11" ry="13"/>
+    </g>
+    <!-- pips da face direita (3) -->
+    <g fill="#ffe27a">
+      <ellipse cx="34" cy="34"  rx="11" ry="13"/>
+      <ellipse cx="70" cy="20"  rx="11" ry="13"/>
+      <ellipse cx="52" cy="84"  rx="11" ry="13"/>
+    </g>
+  </g>
+</svg>

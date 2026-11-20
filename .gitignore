@@ -17,3 +17,14 @@ Thumbs.db
 *.swp
 .idea/
 .vscode/
+
+# App (Capacitor) — tudo gerado pelo build, nao versionado.
+# O projeto android/ e recriado por `npx cap add android` e pelo CI.
+app/node_modules/
+app/www/
+app/android/
+app/ios/
+*.apk
+*.aab
+*.jks
+*.keystore

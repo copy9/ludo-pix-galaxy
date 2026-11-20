@@ -2,6 +2,7 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 import { db, audit } from './db.js';
@@ -58,8 +59,29 @@ const fail = (res, err) => {
 };
 
 /** Exige sessao valida; devolve o usuario ou null (ja tendo respondido). */
+/**
+ * Dois transportes para a MESMA sessao (mesma tabela, mesmo prazo, mesmo hash):
+ *
+ *   - navegador: cookie httpOnly — o JS da pagina nao le o token, entao um XSS
+ *     tambem nao rouba a sessao. E o melhor transporte, e segue o padrao na web.
+ *   - app nativo: cabecalho Authorization: Bearer. No APK a pagina roda em
+ *     capacitor://localhost e a API esta em outro dominio; cookie de terceiro
+ *     nao e enviado (SameSite, e o WebView costuma bloquear), entao sem isto o
+ *     app nao conseguiria nem logar.
+ *
+ * O Bearer tem precedencia: quem manda token esta dizendo explicitamente como
+ * quer ser autenticado.
+ */
+function tokenDaRequisicao(ctx) {
+  const h = ctx.req.headers.authorization || '';
+  const m = /^Bearer\s+(.+)$/i.exec(h);
+  if (m) return { token: m[1].trim(), viaBearer: true };
+  return { token: ctx.cookies[SESSION_COOKIE], viaBearer: false };
+}
+
 function auth(ctx) {
-  const user = userFromToken(ctx.cookies[SESSION_COOKIE]);
+  const { token } = tokenDaRequisicao(ctx);
+  const user = userFromToken(token);
   if (!user) { json(ctx.res, 401, { error: 'nao_autenticado' }); return null; }
   if (user.status === 'blocked') { json(ctx.res, 403, { error: 'conta_bloqueada' }); return null; }
   return user;
@@ -83,9 +105,21 @@ function limited(ctx, name, max, windowMs = 15 * 60 * 1000) {
   return true;
 }
 
+/**
+ * Abre sessao. Sempre manda o cookie; devolve o token no corpo APENAS quando o
+ * cliente pede com `X-Auth-Mode: token`.
+ *
+ * O token so sai do servidor sob pedido porque, na web, guardar sessao em
+ * JavaScript desfaz a protecao do cookie httpOnly: um XSS passaria a conseguir
+ * ler a sessao. Quem precisa dele e o app nativo, que nao tem cookie para usar.
+ */
 const setSession = (ctx, userId) => {
   const { token, expiresAt } = createSession(userId, { userAgent: ctx.req.headers['user-agent'], ip: ctx.ip });
   ctx.res.setHeader('Set-Cookie', serializeCookie(SESSION_COOKIE, token, sessionCookieOptions(expiresAt)));
+  if (String(ctx.req.headers['x-auth-mode'] || '').toLowerCase() === 'token') {
+    return { token, expiresAt };
+  }
+  return {};
 };
 
 /* ------------------------------------------------------------- contas */
@@ -109,8 +143,8 @@ router.post('/api/auth/register', async (ctx) => {
 
   const { salt, hash } = await hashPassword(pass);
   const user = createUser({ email, name, passHash: hash, passSalt: salt });
-  setSession(ctx, user.id);
-  json(ctx.res, 200, { id: user.id, name: user.name, email: user.email, kycLevel: user.kyc_level });
+  const sess = setSession(ctx, user.id);
+  json(ctx.res, 200, { id: user.id, name: user.name, email: user.email, kycLevel: user.kyc_level, ...sess });
 });
 
 router.post('/api/auth/login', async (ctx) => {
@@ -143,13 +177,15 @@ router.post('/api/auth/login', async (ctx) => {
   }
   if (user.status === 'blocked') return json(ctx.res, 403, { error: 'conta_bloqueada' });
 
-  setSession(ctx, user.id);
+  const sess = setSession(ctx, user.id);
   audit(user.id, 'login.ok', null, ctx.ip);
-  json(ctx.res, 200, { id: user.id, name: user.name, email: user.email, kycLevel: user.kyc_level });
+  json(ctx.res, 200, { id: user.id, name: user.name, email: user.email, kycLevel: user.kyc_level, ...sess });
 });
 
 router.post('/api/auth/logout', (ctx) => {
-  destroySession(ctx.cookies[SESSION_COOKIE]);
+  // Encerra a sessao que de fato autenticou esta chamada: no app nativo e a do
+  // Bearer, nao a do cookie (que nem existe la).
+  destroySession(tokenDaRequisicao(ctx).token);
   ctx.res.setHeader('Set-Cookie', serializeCookie(SESSION_COOKIE, '', { path: '/', maxAge: 0 }));
   json(ctx.res, 200, { ok: true });
 });
@@ -177,9 +213,9 @@ router.post('/api/me/password', async (ctx) => {
     .run(hash, salt, Date.now(), u.id);
   // Trocar a senha derruba as outras sessoes: se alguem tinha acesso, perde agora.
   destroyAllSessions(u.id);
-  setSession(ctx, u.id);
+  const sess = setSession(ctx, u.id);
   audit(u.id, 'password.changed', null, ctx.ip);
-  json(ctx.res, 200, { ok: true });
+  json(ctx.res, 200, { ok: true, ...sess });
 });
 
 /* ------------------------------------------------- perfil e limites */
@@ -345,6 +381,26 @@ router.get('/api/_audit', (ctx) => {
 
 /* --------------------------------------------------- arquivos do front */
 
+/* Versao do service worker, calculada a partir do conteudo real dos arquivos.
+ *
+ * O navegador so troca o service worker quando o BYTE do sw.js muda. Se a
+ * versao ficasse fixa no arquivo, bastaria esquecer de edita-la num deploy
+ * para que todo mundo continuasse com a casca antiga em cache — inclusive com
+ * JavaScript velho conversando com uma API nova.
+ *
+ * Calculado uma vez, na subida: o conteudo nao muda enquanto o processo vive.
+ */
+const VERSAO_SW = (() => {
+  const h = createHash('sha1');
+  const alvos = ['index.html', 'jogo.html', 'desafio.html', 'perfil.html', 'offline.html',
+                 'assets/api.js', 'assets/app.js', 'assets/mascot.js', 'assets/music.js',
+                 'assets/sprites.js', 'manifest.webmanifest'];
+  for (const a of alvos) {
+    try { h.update(fs.readFileSync(path.join(ROOT, a))); } catch { h.update(a); }
+  }
+  return 'lpg-' + h.digest('hex').slice(0, 12);
+})();
+
 function serveStatic(req, res, pathname) {
   let rel = decodeURIComponent(pathname).replace(/^\/+/, '');
   if (rel === '') rel = 'index.html';
@@ -367,7 +423,13 @@ function serveStatic(req, res, pathname) {
     return res.end('nao encontrado');
   }
 
-  const buf = fs.readFileSync(file);
+  let buf = fs.readFileSync(file);
+
+  // Carimba a versao real no service worker (ver VERSAO_SW acima).
+  if (path.relative(ROOT, file) === 'sw.js') {
+    buf = Buffer.from(buf.toString('utf8').replace(/const VERSAO = '[^']*'/, `const VERSAO = '${VERSAO_SW}'`));
+  }
+
   const etag = etagFor(buf);
   if (req.headers['if-none-match'] === etag) { res.writeHead(304); return res.end(); }
 
@@ -386,6 +448,38 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const ip = (process.env.TRUST_PROXY === '1' && req.headers['x-forwarded-for']?.split(',')[0].trim())
     || req.socket.remoteAddress || 'desconhecido';
+
+  /* ------------------------------------------------------------- CORS
+   * O app nativo chama a API de outra origem (capacitor://localhost no Android,
+   * ionic://localhost no iOS), entao sem CORS o navegador embutido recusa toda
+   * resposta.
+   *
+   * Liberado por lista, nunca com "*": numa API que movimenta dinheiro, origem
+   * curinga permitiria qualquer site chamar em nome de quem estiver logado.
+   * Nem da para usar "*" com credenciais — o proprio navegador recusa — e
+   * refletir a origem recebida de volta seria o mesmo que liberar geral.
+   */
+  const ORIGENS_APP = new Set([
+    'capacitor://localhost',
+    'ionic://localhost',
+    'http://localhost',
+    ...(process.env.ALLOWED_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean),
+  ]);
+  const origemPedida = req.headers.origin;
+  if (origemPedida && ORIGENS_APP.has(origemPedida)) {
+    res.setHeader('Access-Control-Allow-Origin', origemPedida);
+    res.setHeader('Vary', 'Origin');          // sem isto, um cache serviria a origem errada
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
+  if (req.method === 'OPTIONS') {
+    // Preflight: o navegador pergunta antes de mandar Authorization.
+    if (!origemPedida || !ORIGENS_APP.has(origemPedida)) { res.writeHead(403); return res.end(); }
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Auth-Mode');
+    res.setHeader('Access-Control-Max-Age', '600');
+    res.writeHead(204);
+    return res.end();
+  }
 
   try {
     /* Webhook primeiro, e com o corpo CRU: a assinatura HMAC e calculada sobre
@@ -415,10 +509,21 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
-    const hit = router.match(req.method, url.pathname);
+    /* HEAD e tratado como GET, com o corpo descartado.
+       Monitoramento e health check de hospedagem costumam usar HEAD; sem isto
+       respondiamos 404 e o servico seria considerado morto e reiniciado em
+       laco, mesmo estando perfeitamente no ar. */
+    const metodo = req.method === 'HEAD' ? 'GET' : req.method;
+    if (req.method === 'HEAD') {
+      const fim = res.end.bind(res);
+      res.write = () => true;
+      res.end = (...a) => fim(typeof a[0] === 'function' ? a[0] : undefined);
+    }
+
+    const hit = router.match(metodo, url.pathname);
 
     if (!hit) {
-      if (req.method === 'GET') return serveStatic(req, res, url.pathname);
+      if (metodo === 'GET') return serveStatic(req, res, url.pathname);
       return json(res, 404, { error: 'rota_nao_encontrada' });
     }
 
@@ -436,21 +541,42 @@ const server = http.createServer(async (req, res) => {
       const temSessao = !!parseCookies(req.headers.cookie)[SESSION_COOKIE];
 
       const okOrigem = (valor) => {
+        /* Comparacao pela string crua ANTES de passar pela URL.
+           `new URL('capacitor://localhost').origin` devolve a string "null",
+           porque o WHATWG so calcula origem para esquemas conhecidos (http,
+           https, ws...). Sem este caso, a origem do proprio app nativo era
+           tratada como desconhecida e o cadastro voltava 403.
+           Uma origem ja liberada no CORS e, por definicao, origem legitima
+           para POST tambem. */
+        if (ORIGENS_APP.has(valor)) return true;
         try {
           const u = new URL(valor);
           return u.host === req.headers.host || allowed.includes(u.origin);
         } catch { return false; }
       };
 
-      if (origin) {
-        if (!okOrigem(origin)) return json(res, 403, { error: 'origem_nao_permitida' });
-      } else if (temSessao) {
-        /* Sem `Origin`, antes a checagem era simplesmente PULADA — a defesa
-           virava apenas o SameSite=Lax do cookie. Numa requisicao que carrega
-           sessao, ausencia de origem e sinal de que ela nao veio da nossa
-           pagina, entao exigimos ao menos um Referer nosso. */
-        if (!referer || !okOrigem(referer))
-          return json(res, 403, { error: 'origem_ausente' });
+      /* Requisicao autenticada por Bearer nao corre risco de CSRF, e por isso
+         fica de fora desta checagem.
+         O motivo: CSRF existe porque o navegador anexa o cookie SOZINHO em
+         requisicao disparada por outro site. Um token no cabecalho nao e
+         anexado por ninguem — o site atacante teria de conhece-lo, e se ele
+         conhece o token ja nao precisa de CSRF.
+         A excecao vale so quando o Bearer E a credencial: com cookie presente,
+         a checagem continua valendo normalmente, entao nao da para burla-la
+         mandando um Authorization qualquer junto. */
+      const { viaBearer } = tokenDaRequisicao(ctx);
+
+      if (!viaBearer) {
+        if (origin) {
+          if (!okOrigem(origin)) return json(res, 403, { error: 'origem_nao_permitida' });
+        } else if (temSessao) {
+          /* Sem `Origin`, antes a checagem era simplesmente PULADA — a defesa
+             virava apenas o SameSite=Lax do cookie. Numa requisicao que carrega
+             sessao, ausencia de origem e sinal de que ela nao veio da nossa
+             pagina, entao exigimos ao menos um Referer nosso. */
+          if (!referer || !okOrigem(referer))
+            return json(res, 403, { error: 'origem_ausente' });
+        }
       }
       const raw = await readBody(req);
       if (raw.length) {

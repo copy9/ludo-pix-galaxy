@@ -1,0 +1,21 @@
+# Nada daqui entra na imagem.
+.git
+.github
+app/
+server/data/
+server/node_modules/
+server/test/
+node_modules/
+assets/icon-src/
+*.md
+!README.md
+Dockerfile
+.dockerignore
+.gitignore
+fly.toml
+*.apk
+*.aab
+*.jks
+*.keystore
+.env
+.env.*

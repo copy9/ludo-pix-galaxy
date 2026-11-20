@@ -1,0 +1,63 @@
+# Fly.io — configuração do servidor.
+#
+# POR QUE FLY.IO, e não Railway/Render:
+#
+#   1. Região gru (São Paulo). Seus jogadores estão no Brasil e a partida faz
+#      polling a cada 1,5s; servidor nos EUA acrescenta ~120ms em cada ida e
+#      volta, o que aparece como jogo "travando". Railway e Render não têm
+#      região no Brasil.
+#   2. Volume de verdade por preço baixo — e sem volume o banco morre a cada
+#      deploy (ver abaixo).
+#
+# Se preferir outro provedor, o Dockerfile é portátil: funciona em Railway,
+# Render, um VPS ou qualquer lugar que rode container. Só garanta o disco
+# persistente.
+
+app = "ludo-pix-galaxy"
+primary_region = "gru"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "8080"
+  TRUST_PROXY = "1"          # o Fly fica na frente; sem isto o rate limit vê o IP do proxy
+  DATA_DIR = "/dados"
+
+# O BANCO VIVE AQUI. Sem este volume, cada deploy apaga saldos, contas,
+# histórico e partidas — o container é recriado do zero toda vez.
+[[mounts]]
+  source = "lpg_dados"
+  destination = "/dados"
+
+[http_service]
+  internal_port = 8080
+  force_https = true         # credenciais e valores não trafegam em texto puro
+  auto_stop_machines = false # ver nota abaixo
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 200
+    hard_limit = 400
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/api/health"
+
+# auto_stop_machines fica DESLIGADO de propósito.
+# Com ele ligado, a máquina dorme quando não há tráfego — e junto dorme a
+# faxina periódica que devolve aposta de desafio expirado e encerra partida
+# abandonada. Dinheiro de jogador ficaria preso esperando alguém acessar o site.
+#
+# UMA MÁQUINA SÓ, também de propósito: o banco é SQLite num volume, e volume do
+# Fly monta em uma máquina por vez. Para escalar horizontalmente, migre para
+# Postgres antes (está no SECURITY.md).
+
+[deploy]
+  strategy = "immediate"     # com volume e máquina única, não há rolling deploy

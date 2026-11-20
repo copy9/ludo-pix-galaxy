@@ -163,8 +163,11 @@ export const json = (res, status, body) => {
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8',
+  // Sem este tipo o navegador ignora o manifest e nao oferece instalar o app.
+  '.webmanifest': 'application/manifest+json; charset=utf-8',
   '.webp': 'image/webp', '.png': 'image/png', '.jpg': 'image/jpeg',
   '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.woff2': 'font/woff2',
+  '.txt': 'text/plain; charset=utf-8',
 };
 export const mimeFor = (ext) => MIME[ext] || 'application/octet-stream';
 export const etagFor = (buf) => '"' + createHash('sha1').update(buf).digest('base64url') + '"';

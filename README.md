@@ -8,6 +8,9 @@ dependência de terceiros** — só o que vem no Node 22+.
 > ⚠️ **Leia o [SECURITY.md](SECURITY.md) antes de aceitar dinheiro de verdade.**
 > Ele lista o que ainda falta e por quê. A lista não é formalidade.
 
+📱 **App:** [README-APP.md](README-APP.md) — PWA e APK Android.
+🚀 **Colocar no ar:** [DEPLOY.md](DEPLOY.md).
+
 ---
 
 ## Rodando
@@ -23,7 +26,7 @@ Não existe `npm install`: o projeto não tem dependências. Requer **Node 22.5+
 O servidor também serve o front, então abra `http://localhost:3000` e pronto.
 
 ```bash
-npm test            # 82 testes
+npm test            # 95 testes
 ```
 
 ### Abrir só o front
@@ -48,6 +51,7 @@ o mais funciona igual.
 | `jogo.html` | Tabuleiro. Modo livre (2–4 jogadores, duplas) e modo aposta (`?match=CÓDIGO`) |
 | `desafio.html` | Criar e acompanhar desafio entre amigos (`?c=CÓDIGO`) |
 | `perfil.html` | Conta, verificação, carteira e limites de jogo responsável |
+| `manifest.webmanifest`, `sw.js`, `offline.html` | o que torna o site instalável como app |
 
 ## Estrutura
 
@@ -58,6 +62,7 @@ assets/
   music.js      trilha e efeitos via Web Audio
   sprites.js    manifesto dos sprites
   sprites/      18 arquivos .webp
+app/            empacotamento Android (Capacitor) — ver README-APP.md
 server/
   src/
     index.js    rotas HTTP

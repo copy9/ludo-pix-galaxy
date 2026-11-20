@@ -1,0 +1,19 @@
+{
+  "appId": "com.ludopixgalaxy.app",
+  "appName": "Ludo Pix Galaxy",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true
+  },
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#0c0724",
+      "overlaysWebView": true
+    }
+  }
+}

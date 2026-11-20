@@ -1,0 +1,22 @@
+{
+  "name": "ludo-pix-galaxy-app",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Empacotamento Android (Capacitor) do Ludo Pix Galaxy.",
+  "scripts": {
+    "build": "node build.mjs",
+    "sync": "node build.mjs && cap sync android",
+    "add:android": "cap add android",
+    "open:android": "cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "7.4.3",
+    "@capacitor/app": "7.1.0",
+    "@capacitor/core": "7.4.3",
+    "@capacitor/status-bar": "7.0.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "7.4.3"
+  }
+}

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sem conexão — Ludo Pix Galaxy</title>
+<link rel="icon" href="favicon.ico">
+<style>
+  :root{
+    --void:#05030f; --deep:#0c0724; --violet:#7b5cff; --magenta:#ff3dcb; --cyan:#2de2ff;
+    --text:#eaf0ff; --muted:rgba(234,240,255,.62);
+    --card:rgba(20,12,56,.58); --brd:rgba(140,160,255,.30);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    min-height:100dvh; display:grid; place-items:center; padding:24px;
+    background:radial-gradient(120% 90% at 50% 10%, #1b1048 0%, var(--deep) 55%, var(--void) 100%);
+    color:var(--text); font-family:'Exo 2','Segoe UI',system-ui,sans-serif; text-align:center;
+    padding-top:max(24px,env(safe-area-inset-top)); padding-bottom:max(24px,env(safe-area-inset-bottom));
+  }
+  .card{
+    max-width:380px; width:100%; padding:32px 24px; border-radius:22px;
+    background:var(--card); border:1px solid var(--brd);
+    box-shadow:0 20px 60px rgba(0,0,0,.45); backdrop-filter:blur(10px);
+  }
+  .ico{font-size:54px; line-height:1; margin-bottom:14px;}
+  h1{font-family:'Orbitron','Segoe UI',system-ui,sans-serif; font-size:21px; letter-spacing:.3px; margin-bottom:10px;}
+  p{color:var(--muted); font-size:15px; line-height:1.6;}
+  .nota{
+    margin-top:18px; padding:12px 14px; border-radius:12px; font-size:13px; line-height:1.55;
+    background:rgba(45,226,255,.09); border:1px solid rgba(45,226,255,.28); color:#cfefff;
+  }
+  button{
+    margin-top:20px; width:100%; padding:14px; font:600 16px/1 'Exo 2',system-ui,sans-serif;
+    color:#fff; cursor:pointer; border:0; border-radius:14px;
+    background:linear-gradient(135deg,var(--violet),var(--magenta));
+    box-shadow:0 10px 24px rgba(123,92,255,.35);
+  }
+  button:active{transform:translateY(1px);}
+  .link{display:inline-block; margin-top:14px; color:var(--cyan); font-size:14px; text-decoration:none;}
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="ico">🛰️</div>
+    <h1>Sem conexão</h1>
+    <p>Não foi possível falar com o servidor. Verifique sua internet e tente de novo.</p>
+
+    <!-- Dito explicitamente: sem rede nao da para mostrar saldo nem partida,
+         e um numero velho seria pior do que nenhum numero. -->
+    <div class="nota">
+      Carteira, desafios e partidas valendo aposta precisam de internet — os valores
+      vêm do servidor e nunca de uma cópia guardada no aparelho.
+    </div>
+
+    <button id="tentar">Tentar de novo</button>
+    <a class="link" href="/jogo.html">Jogar no modo livre (funciona offline)</a>
+  </div>
+
+<script>
+  document.getElementById('tentar').addEventListener('click', () => location.reload());
+  // Assim que a conexao volta, recarrega sozinho.
+  window.addEventListener('online', () => location.reload());
+</script>
+</body>
+</html>

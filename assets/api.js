@@ -14,6 +14,35 @@
 const LP = (function () {
   const BASE = window.LUDOPIX_API || '';
 
+  /* Dois transportes de sessao, escolhidos pelo ambiente:
+   *
+   *   web  -> cookie httpOnly. O JS desta pagina nao le o token, entao um XSS
+   *           tambem nao rouba a sessao. E o transporte mais seguro.
+   *   app  -> cabecalho Authorization: Bearer. No APK a pagina roda em
+   *           capacitor://localhost e a API esta em outro dominio, onde o
+   *           cookie simplesmente nao e enviado.
+   *
+   * O token do app fica no armazenamento do proprio aplicativo, que o sistema
+   * isola por app. Nao e tao bom quanto httpOnly, e e por isso que a web nao
+   * usa este caminho; no nativo nao existe alternativa melhor.
+   */
+  const NATIVO = !!(window.Capacitor && window.Capacitor.isNativePlatform &&
+                    window.Capacitor.isNativePlatform());
+  const CHAVE_TOKEN = 'lpg_sessao';
+
+  let tokenMem = null;                       // espelho em memoria, evita I/O a cada chamada
+  const lerToken = () => {
+    if (!NATIVO) return null;
+    if (tokenMem !== null) return tokenMem;
+    try { tokenMem = localStorage.getItem(CHAVE_TOKEN) || ''; } catch { tokenMem = ''; }
+    return tokenMem;
+  };
+  const gravarToken = (t) => {
+    if (!NATIVO) return;
+    tokenMem = t || '';
+    try { t ? localStorage.setItem(CHAVE_TOKEN, t) : localStorage.removeItem(CHAVE_TOKEN); } catch {}
+  };
+
   class ApiError extends Error {
     constructor(status, code, message) {
       super(message || code || `HTTP ${status}`);
@@ -23,12 +52,20 @@ const LP = (function () {
   }
 
   async function call(method, path, body) {
+    const headers = {};
+    if (body !== undefined) headers['Content-Type'] = 'application/json';
+    if (NATIVO) {
+      headers['X-Auth-Mode'] = 'token';       // pede ao servidor que devolva o token
+      const t = lerToken();
+      if (t) headers.Authorization = `Bearer ${t}`;
+    }
+
     let res;
     try {
       res = await fetch(BASE + path, {
         method,
-        headers: body === undefined ? {} : { 'Content-Type': 'application/json' },
-        // Sem isto o cookie de sessao nao e enviado e tudo responde 401.
+        headers,
+        // Sem isto o cookie de sessao nao e enviado e tudo responde 401 na web.
         credentials: 'include',
         body: body === undefined ? undefined : JSON.stringify(body),
       });
@@ -38,6 +75,16 @@ const LP = (function () {
     const text = await res.text();
     let data = null;
     try { data = text ? JSON.parse(text) : null; } catch { /* resposta nao-JSON */ }
+
+    if (NATIVO) {
+      // Login/cadastro/troca de senha devolvem token novo: guardar na hora,
+      // senao a proxima chamada ja sai sem credencial.
+      if (data && data.token) gravarToken(data.token);
+      // Sessao expirada ou derrubada: descarta o token para o app voltar ao login
+      // em vez de insistir com uma credencial morta.
+      if (res.status === 401) gravarToken(null);
+    }
+
     if (!res.ok) throw new ApiError(res.status, data?.error, data?.message);
     return data;
   }
@@ -73,7 +120,12 @@ const LP = (function () {
     // ---- contas
     register: (email, name, password) => post('/api/auth/register', { email, name, password }),
     login:    (email, password)       => post('/api/auth/login', { email, password }),
-    logout:   ()                      => post('/api/auth/logout'),
+    // Apaga o token local mesmo se a chamada falhar: sair tem de sair, com ou
+    // sem rede. A sessao do servidor expira sozinha pelo prazo.
+    logout: async () => {
+      try { return await post('/api/auth/logout'); }
+      finally { gravarToken(null); }
+    },
     me:       ()                      => get('/api/me'),
     changePassword: (current, next)   => post('/api/me/password', { current, next }),
 
