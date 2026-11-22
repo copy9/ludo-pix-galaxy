@@ -257,6 +257,30 @@
   #ctlMascot .m-bubble{ top:auto; bottom:100%; left:0; transform:scale(.6); transform-origin:bottom left; margin-bottom:6px; }
   #ctlMascot .m-bubble.show{ transform:scale(1); }
   #ctlMascot .m-bubble::after{ left:22px; }
+
+  /* ---- Toque e movimento (acrescentado na revisao de desempenho) ---- */
+
+  /* touch-action:manipulation desliga a espera por duplo-toque-para-ampliar.
+     Sem isto o navegador segura cada toque por alguns dezenas de ms para ver
+     se vem um segundo — e e exatamente isso que da a sensacao de "pesado". */
+  button, .token, .cell, a, input, select, label, [role=button]{ touch-action:manipulation; }
+
+  /* Nada de realce cinza do Android ao tocar, nem selecao de texto acidental
+     ao arrastar o dedo sobre o tabuleiro. */
+  button, .token, .cell{ -webkit-tap-highlight-color:transparent; }
+  #board, #boardFrame{ -webkit-user-select:none; user-select:none; }
+
+  /* Quem pediu menos movimento no sistema recebe menos movimento aqui:
+     o enfeite para, o jogo continua igual. Tambem alivia muito o aparelho. */
+  @media (prefers-reduced-motion: reduce){
+    body::before, body::after, #boardFrame::before,
+    .token.movable::before, #board::after, .cell.star::after{
+      animation:none !important;
+    }
+    .token{ transition:none !important; }
+    *{ scroll-behavior:auto !important; }
+  }
+
 </style>
 </head>
 <body>

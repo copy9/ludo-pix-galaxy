@@ -36,7 +36,13 @@
       linear-gradient(180deg,#0a0624,#05030f 70%);
     display:flex; flex-direction:column; align-items:center; padding:16px 12px 32px;
   }
-  body::before,body::after{ content:''; position:fixed; inset:0; z-index:-1; pointer-events:none; }
+  /* As duas camadas de estrelas sao MAIORES que a tela de proposito.
+     A de cima desliza via transform (ver @keyframes drift); para o
+     deslocamento nao revelar uma borda vazia, a camada sobra um ladrilho
+     inteiro para cada lado. */
+  body::before,body::after{ content:''; position:fixed; z-index:-1; pointer-events:none; }
+  body::before{ inset:0; }
+  body::after{ top:-340px; left:-470px; width:calc(100% + 470px); height:calc(100% + 340px); }
   body::before{
     background-image:
       radial-gradient(1.5px 1.5px at 20px 30px,#fff,transparent),
@@ -53,9 +59,15 @@
       radial-gradient(1px 1px at 380px 260px,#fff,transparent),
       radial-gradient(1.5px 1.5px at 120px 300px,#ffc0ee,transparent);
     background-size:470px 340px; animation:drift 90s linear infinite, twinkle 7s ease-in-out infinite alternate-reverse;
+    will-change:transform;
   }
   @keyframes twinkle{ from{opacity:.45;} to{opacity:1;} }
-  @keyframes drift{ from{background-position:0 0;} to{background-position:470px 340px;} }
+  /* ANTES: animava background-position, que nao pode ser composto na GPU e
+     obrigava o navegador a REPINTAR A TELA INTEIRA a cada quadro — era o maior
+     custo da pagina. translate3d faz o mesmo movimento so na GPU.
+     O deslocamento e de exatamente um ladrilho (470x340), entao o laco continua
+     invisivel. */
+  @keyframes drift{ from{transform:translate3d(0,0,0);} to{transform:translate3d(470px,340px,0);} }
 
   h1,h1.logo{
     font-family:var(--display); font-weight:800; font-size:24px; letter-spacing:3px; text-transform:uppercase;
@@ -149,11 +161,20 @@
   }
 
   #boardFrame{
+    position:relative; overflow:hidden; isolation:isolate;
     width:100%; aspect-ratio:1/1; max-width:480px; padding:6px; border-radius:30px;
-    background:linear-gradient(120deg,#2de2ff,#7b5cff,#ff3dcb,#ffe27a,#2de2ff); background-size:300% 300%; animation:flow 9s linear infinite;
+    background:#1a1050;
     box-shadow:0 0 36px rgba(123,92,255,.55), 0 24px 50px rgba(0,0,0,.6);
   }
-  @keyframes flow{ from{background-position:0% 50%;} to{background-position:300% 50%;} }
+  /* A faixa colorida corre por translate, nao por background-position.
+     A camada tem o dobro da largura e a sequencia de cores repetida duas vezes,
+     entao deslocar 50% equivale a um ciclo completo e o laco fica invisivel. */
+  #boardFrame::before{
+    content:''; position:absolute; top:0; bottom:0; left:0; width:200%; z-index:-1;
+    background:linear-gradient(120deg,#2de2ff,#7b5cff,#ff3dcb,#ffe27a,#2de2ff,#7b5cff,#ff3dcb,#ffe27a,#2de2ff);
+    animation:flow 9s linear infinite; will-change:transform;
+  }
+  @keyframes flow{ from{transform:translate3d(0,0,0);} to{transform:translate3d(-50%,0,0);} }
   #board{
     position:relative; width:100%; height:100%; border-radius:25px; overflow:hidden;
     background:
@@ -178,14 +199,31 @@
   .slot{ position:absolute; border-radius:50%; background:rgba(5,3,15,.42); box-shadow:inset 0 3px 8px rgba(0,0,0,.65), 0 0 0 2px rgba(255,255,255,.22); }
   .tri{ position:absolute; filter:saturate(1.2); }
   .token{
-    position:absolute; border-radius:50%; overflow:hidden; cursor:default; z-index:5; transition:left .2s ease, top .2s ease;
+    position:absolute; left:0; top:0; border-radius:50%; cursor:default; z-index:5;
+    /* Posicao por transform (ver renderTokens): translate e composto na GPU,
+       enquanto animar left/top refaz o layout a cada quadro.
+       overflow:hidden saiu para o anel de "jogavel" poder passar da borda. */
+    transition:transform .17s linear;
     border:1px solid rgba(255,255,255,.55); box-shadow:0 0 12px var(--c), 0 4px 8px rgba(0,0,0,.5), inset 0 -5px 7px rgba(0,0,0,.3);
+    touch-action:manipulation;
   }
+  .token.sem-transicao{ transition:none; }   /* ao nascer, nao desliza do canto */
   .token::after{ content:''; position:absolute; top:8%; left:14%; width:45%; height:38%; border-radius:50%;
     background:radial-gradient(circle,rgba(255,255,255,.9),rgba(255,255,255,0) 70%); }
   .token.current-owner{ box-shadow:0 0 0 3px #fff, 0 0 18px var(--c), 0 0 26px var(--c), 0 4px 8px rgba(0,0,0,.5), inset 0 -5px 7px rgba(0,0,0,.3); }
-  .token.movable{ cursor:pointer; animation:pulse 1s infinite; z-index:6; }
-  @keyframes pulse{ 0%,100%{ box-shadow:0 0 0 3px #fff, 0 0 18px var(--c);} 50%{ box-shadow:0 0 0 11px rgba(255,255,255,0), 0 0 30px var(--c);} }
+  .token.movable{ cursor:pointer; z-index:6; }
+  /* ANTES: animation:pulse animava box-shadow — repintura a cada quadro, em
+     ate 4 pecas ao mesmo tempo. Agora o pulso e um anel proprio que so cresce
+     e some: transform e opacity, ambos compostos na GPU, custo quase zero. */
+  .token.movable::before{
+    content:''; position:absolute; inset:-2px; border-radius:50%;
+    border:3px solid #fff; pointer-events:none;
+    animation:pulseRing 1.1s ease-out infinite; will-change:transform,opacity;
+  }
+  @keyframes pulseRing{
+    0%{ transform:scale(1); opacity:.9; }
+    100%{ transform:scale(1.85); opacity:0; }
+  }
 
   #controls{ display:flex; align-items:center; gap:22px; margin-top:20px; }
   #diceWrap{ width:64px; height:64px; perspective:400px; }
@@ -291,6 +329,23 @@
   #ctlMascot .m-bubble{ top:auto; bottom:100%; left:0; transform:scale(.6); transform-origin:bottom left; margin-bottom:6px; }
   #ctlMascot .m-bubble.show{ transform:scale(1); }
   #ctlMascot .m-bubble::after{ left:22px; }
+
+  /* ---- Toque e movimento (revisao de desempenho) ---- */
+  /* touch-action:manipulation desliga a espera por duplo-toque-para-ampliar.
+     Sem isto o navegador segura cada toque algumas dezenas de ms para ver se
+     vem um segundo — e e isso que da a sensacao de "pesado". */
+  button, .cell, a, input, select, label, [role=button]{ touch-action:manipulation; }
+  button, .token, .cell{ -webkit-tap-highlight-color:transparent; }
+  #board, #boardFrame{ -webkit-user-select:none; user-select:none; }
+
+  /* Quem pediu menos movimento no sistema recebe menos movimento aqui:
+     o enfeite para, o jogo continua igual, e o aparelho alivia bastante. */
+  @media (prefers-reduced-motion: reduce){
+    body::before, body::after, #boardFrame::before,
+    .token.movable::before, #board::after, .cell.star::after{ animation:none !important; }
+    .token{ transition:none !important; }
+  }
+
 </style>
 </head>
 <body>
@@ -513,6 +568,14 @@ let players=[], curIdx=0, dice=null, rolling=false, gameOver=false;
 function buildStaticBoard(){
   const board=document.getElementById('board');
   board.innerHTML='';
+  /* innerHTML='' descarta os elementos das pecas; sem limpar o mapa, a proxima
+     renderizacao reaproveitaria nos orfaos, que nao estao mais na pagina, e o
+     tabuleiro apareceria vazio. */
+  tokenEls.clear();
+  /* O listener delegado fica no proprio #board, que sobrevive ao innerHTML='',
+     entao NAO se registra de novo: um segundo listener faria cada toque mover
+     a peca duas vezes. */
+  ligarCliqueDasPecas();
   // path + home-stretch cells
   const cellSet = new Map();
   masterPath.forEach((rc,i)=>{ cellSet.set(rc.join(','), safeIdx.has(i)?'star':'plain'); });
@@ -601,9 +664,16 @@ function legalMoves(p, d){
   return list;
 }
 
+/* Pecas reaproveitadas entre renderizacoes.
+   ANTES cada chamada apagava as 16 pecas e criava 16 novas — e durante um
+   movimento isso acontece a cada 190ms. Cada peca nova custa recalculo de
+   estilo, layout e repintura de tres camadas de sombra. Agora o elemento vive,
+   e so o que mudou e reescrito. */
+const tokenEls = new Map();   // "pi:ti" -> elemento
+
 function renderTokens(movable){
-  document.querySelectorAll('.token').forEach(t=>t.remove());
   const board=document.getElementById('board');
+  const vivos=new Set();
   const groups={};
   players.forEach((p,pi)=>{
     p.tokens.forEach((pos,ti)=>{
@@ -618,22 +688,61 @@ function renderTokens(movable){
     arr.forEach((tok,idx)=>{
       const n=arr.length;
       const off = n===1 ? [0,0] : [ (idx%2===0?-1:1)*1.6, (idx<2?-1:1)*1.6 ];
-      const d=document.createElement('div');
-      d.className='token';
-      const size = n>1 ? CELL*0.6 : CELL*0.75;
-      d.style.width=size+'%'; d.style.height=size+'%';
-      d.style.left=(base.left+off[0]-size/2)+'%';
-      d.style.top=(base.top+off[1]-size/2)+'%';
-      d.style.background='radial-gradient(circle at 35% 30%, #fff 0, '+HEX[tok.color]+' 38%, '+HEXDK[tok.color]+' 100%)'; d.style.setProperty('--c',HEX[tok.color]);
-      if(tok.pi===curIdx) d.classList.add('current-owner');
-      if(movable && tok.pi===curIdx && movable.includes(tok.ti)){
-        d.classList.add('movable');
-        d.addEventListener('click', ()=>doMove(tok.ti));
+      const chave = tok.pi+':'+tok.ti;
+      vivos.add(chave);
+
+      let d = tokenEls.get(chave);
+      const novo = !d;
+      if(novo){
+        d=document.createElement('div');
+        d.className='token sem-transicao';
+        d.dataset.ti = tok.ti;                 // lido pelo clique delegado
+        d.dataset.pi = tok.pi;
+        d.style.background='radial-gradient(circle at 35% 30%, #fff 0, '+HEX[tok.color]+' 38%, '+HEXDK[tok.color]+' 100%)';
+        d.style.setProperty('--c',HEX[tok.color]);
+        board.appendChild(d);
+        tokenEls.set(chave,d);
       }
-      board.appendChild(d);
+
+      const size = n>1 ? CELL*0.6 : CELL*0.75;
+      const x = base.left+off[0]-size/2;
+      const y = base.top +off[1]-size/2;
+      /* translate em % e relativo ao TAMANHO DA PROPRIA PECA, nao ao tabuleiro.
+         Como a peca mede `size`% do tabuleiro, para leva-la a `x`% do tabuleiro
+         o deslocamento e x/size * 100. */
+      const tx = (x/size*100), ty = (y/size*100);
+
+      if(d.style.width !== size+'%'){ d.style.width=size+'%'; d.style.height=size+'%'; }
+      const novoT = `translate3d(${tx.toFixed(3)}%,${ty.toFixed(3)}%,0)`;
+      if(d.style.transform !== novoT) d.style.transform = novoT;
+
+      d.classList.toggle('current-owner', tok.pi===curIdx);
+      d.classList.toggle('movable', !!(movable && tok.pi===curIdx && movable.includes(tok.ti)));
+
+      // Libera a transicao so no quadro seguinte ao nascimento.
+      if(novo) requestAnimationFrame(()=>d.classList.remove('sem-transicao'));
     });
   });
+
+  // Peca que saiu do tabuleiro (nao deveria acontecer, mas mantem o DOM limpo)
+  for(const [chave,el] of tokenEls){
+    if(!vivos.has(chave)){ el.remove(); tokenEls.delete(chave); }
+  }
 }
+
+/* Clique delegado: um listener no tabuleiro, em vez de um por peca recriado a
+   cada renderizacao. Tambem evita o vazamento de listeners antigos. */
+function ligarCliqueDasPecas(){
+  const board=document.getElementById('board');
+  if(!board || board.dataset.ligado) return;   // idempotente: nunca duplica
+  board.dataset.ligado='1';
+  board.addEventListener('click', (e)=>{
+    const t=e.target.closest('.token.movable');
+    if(t) doMove(Number(t.dataset.ti));
+  });
+}
+ligarCliqueDasPecas();
+document.addEventListener('DOMContentLoaded', ligarCliqueDasPecas);
 
 let TEAM=null, ranking=[];
 let GM=null, SM=null;
